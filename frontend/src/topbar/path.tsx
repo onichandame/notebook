@@ -8,7 +8,6 @@ export class Path {
     public match: string,
     public title: string,
     public link: string,
-    public priv: boolean,
     parent?: Path,
     public icon?: ReactElement
   ) {
@@ -44,12 +43,10 @@ export class Path {
   }
 }
 
-const home = new Path(`*`, `My Note`, `/`, true);
-new Path(`/notes/*`, `Notes`, `/notes`, true, home, <NoteAlt />);
-new Path(`/passwords/*`, `Passwords`, `/passwords`, true, home, <Lock />);
-new Path(`/sync/*`, `Sync`, `/sync`, true, home, <Sync />);
-new Path(`/settings/*`, `Settings`, `/settings`, true, home, <Settings />);
-new Path(`/login`, `Login`, `/login`, false, home);
-new Path(`/signup`, `Signup`, `/signup`, false, home);
+const home = new Path(`*`, `My Note`, `/`);
+new Path(`/notes/*`, `Notes`, `/notes`, home, <NoteAlt />);
+new Path(`/passwords/*`, `Passwords`, `/passwords`, home, <Lock />);
+new Path(`/sync/*`, `Sync`, `/sync`, home, <Sync />);
+new Path(`/settings/*`, `Settings`, `/settings`, home, <Settings />);
 
 export { home as root };

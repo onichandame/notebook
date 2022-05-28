@@ -1,6 +1,6 @@
 import {
-  Divider,
   Box,
+  Divider,
   Drawer,
   List,
   ListItem,
@@ -11,7 +11,6 @@ import {
 import { FC, Fragment, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { useUser } from "../../backend";
 import { root } from "../path";
 
 export const Sidebar: FC<{ open: boolean; setOpen: (_: boolean) => void }> = ({
@@ -19,7 +18,6 @@ export const Sidebar: FC<{ open: boolean; setOpen: (_: boolean) => void }> = ({
   setOpen,
 }) => {
   const navigate = useNavigate();
-  const user = useUser();
   const click = useCallback(
     (handler: () => void) => {
       return () => {
@@ -27,7 +25,7 @@ export const Sidebar: FC<{ open: boolean; setOpen: (_: boolean) => void }> = ({
         setOpen(false);
       };
     },
-    [setOpen]
+    [setOpen],
   );
   return (
     <Drawer open={open} onClose={() => setOpen(false)} anchor="left">
@@ -35,8 +33,7 @@ export const Sidebar: FC<{ open: boolean; setOpen: (_: boolean) => void }> = ({
         <List>
           {root
             .getChildren()
-            ?.filter((v) => (user ? v.priv : !v.priv))
-            .map((path) => (
+            ?.map((path) => (
               <Fragment key={path.match}>
                 <ListItem disablePadding>
                   <ListItemButton onClick={click(() => navigate(path.link))}>

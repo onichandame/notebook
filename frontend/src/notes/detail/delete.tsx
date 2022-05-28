@@ -6,14 +6,13 @@ import {
   DialogContentText,
   DialogTitle,
 } from "@mui/material";
+import { DocumentType } from "@onichandame/type-rxdb";
 import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { useService } from "../../backend";
 import { Note } from "../../model";
 
-export const Delete: FC<{ note: Note }> = ({ note }) => {
-  const svc = useService();
+export const Delete: FC<{ note: DocumentType<typeof Note> }> = ({ note }) => {
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState(false);
   return (
@@ -48,10 +47,7 @@ export const Delete: FC<{ note: Note }> = ({ note }) => {
           <Button
             color="secondary"
             onClick={async () => {
-              await svc.updateNotes(
-                { deletedAt: new Date() },
-                { id: { eq: note.id } }
-              );
+              await note.softDelete();
               setDeleting(false);
               navigate(-1);
             }}

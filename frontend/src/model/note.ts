@@ -1,39 +1,11 @@
-import { IsOptional, IsString } from "class-validator";
-import { DateFilter, StringFilter } from ".";
+import { Collection, Field } from "@onichandame/type-rxdb";
 
-import { Owned } from "./base";
-import { IntFilter } from "./filter";
+import { Base } from "./base";
 
-export class Note extends Owned {
+@Collection({ name: `notes`, version: 0 })
+export class Note extends Base {
+  @Field()
   title!: string;
-  content!: string;
-
-  static get fields(): string[] {
-    return super.fields.concat([`title`, `content`] as (keyof Note)[]);
-  }
-}
-
-export class NoteFilter {
-  id?: InstanceType<typeof IntFilter>;
-  uuid?: InstanceType<typeof StringFilter>;
-  deletedAt?: InstanceType<typeof DateFilter>;
-}
-
-export class CreateNoteInput {
-  @IsString()
-  title!: string;
-  @IsString()
-  content!: string;
-}
-
-export class UpdateNoteInput {
-  @IsOptional()
-  @IsString()
-  title?: string;
-  @IsOptional()
-  @IsString()
+  @Field()
   content?: string;
-  @IsOptional()
-  @IsString()
-  deletedAt?: Date;
 }

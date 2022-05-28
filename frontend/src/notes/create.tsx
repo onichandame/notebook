@@ -1,26 +1,34 @@
 import { Button, Grid, TextField } from "@mui/material";
+import { IsString } from "class-validator";
 import { useForm } from "react-hook-form";
 import { classValidatorResolver } from "@hookform/resolvers/class-validator";
 import { useNavigate } from "react-router";
 import { FC } from "react";
 
-import { useService } from "../backend";
-import { CreateNoteInput } from "../model";
+import { Note } from "../model";
 import { CenterRow } from "../common";
+import { useDb } from "../db";
 
-const resolver = classValidatorResolver(CreateNoteInput);
+class CreateNoteForm implements Partial<Note> {
+  @IsString()
+  title!: string;
+  @IsString()
+  content!: string;
+}
+
+const resolver = classValidatorResolver(CreateNoteForm);
 export const Create: FC = () => {
   const navigate = useNavigate();
-  const svc = useService();
+  const db = useDb();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<CreateNoteInput>({ resolver });
+  } = useForm<CreateNoteForm>({ resolver });
   return (
     <form
       onSubmit={handleSubmit(async (vals) => {
-        await svc.createNote(vals);
+        await db?.notes.insert(vals as any);
         navigate(-1);
       })}
     >

@@ -12,13 +12,7 @@ export const Private: FC = () => {
   const user = useUser();
   const location = useLocation();
   return user ? (
-    <Routes>
-      <Route path="notes/*" element={<Notes />} />
-      <Route path="passwords/*" element={<Password />} />
-      <Route path="settings/*" element={<Settings />} />
-      <Route path="sync/*" element={<Sync />} />
-      <Route path="/" element={<Home />} />
-    </Routes>
+    <Routes></Routes>
   ) : (
     <Navigate
       to={`/login?redirect=${encodeURIComponent(

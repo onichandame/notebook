@@ -1,12 +1,13 @@
 import { SnackbarProvider } from "notistack";
 import { FC } from "react";
-
-import { BackendProvider } from "./backend";
+import { DbProvider } from "./db";
 
 export const Global: FC = ({ children }) => {
   return (
     <SnackbarProvider maxSnack={3}>
-      <BackendProvider>{children}</BackendProvider>
+      <DbProvider>
+        {children}
+      </DbProvider>
     </SnackbarProvider>
   );
 };
