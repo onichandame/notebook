@@ -1,16 +1,16 @@
 import { FC } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 
 import { Create } from "./create";
-import { Detail } from "./detail";
+import { Item } from "./item";
 import { List } from "./list";
 
-export const Notes: FC = () => {
+export const Note: FC = () => {
   return (
     <>
       <Routes>
         <Route path="create" element={<Create />} />
-        <Route path=":id/*" element={<Detail />} />
+        <Route path=":id/*" element={<Item />} />
         <Route path="/" element={<List />} />
       </Routes>
     </>

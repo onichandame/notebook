@@ -1,63 +1,38 @@
 import { classValidatorResolver } from "@hookform/resolvers/class-validator";
-import {
-  Button,
-  Checkbox,
-  Divider,
-  FormControl,
-  FormControlLabel,
-  Grid,
-  TextField,
-} from "@mui/material";
-import { FC, useCallback, useEffect, useState } from "react";
+import { Button, Divider, Grid, TextField } from "@mui/material";
+import { DocumentType } from "@onichandame/type-rxdb";
+import { FC } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-import { useService } from "../../../backend";
 import { CenterRow, IconField } from "../../../common";
-import { Password, UpdatePasswordInput } from "../../../model";
+import { Password } from "../../../model";
 
-const resolver = classValidatorResolver(UpdatePasswordInput);
+class UpdatePasswordForm implements Partial<Password> {
+  title?: string;
+  password?: string;
+  username?: string;
+  url?: string;
+  icon?: string;
+}
 
-export const Update: FC<{ pwd: Password }> = ({ pwd }) => {
-  const svc = useService();
-  const params = useParams();
-  const [cacheKey, setCacheKey] = useState(``);
+const resolver = classValidatorResolver(UpdatePasswordForm);
+
+export const Update: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
   const {
     control,
-    register,
     handleSubmit,
-    getValues,
     formState: { errors, isSubmitting },
-    reset,
-  } = useForm<UpdatePasswordInput>({
+  } = useForm<UpdatePasswordForm>({
     resolver,
+    defaultValues: pwd.toJSON(),
   });
   const navigate = useNavigate();
-  const resetForm = useCallback(() => {
-    reset({
-      title: pwd?.title,
-      password: pwd?.password,
-      username: pwd?.username,
-      url: pwd?.url,
-      icon: pwd?.icon,
-      isLocal: pwd?.isLocal,
-    });
-  }, [reset, pwd]);
-  useEffect(() => {
-    const cache = cacheKey && window.localStorage.getItem(cacheKey);
-    if (cache) reset(JSON.parse(cache));
-    else if (pwd) resetForm();
-  }, [pwd, cacheKey, resetForm, reset]);
-  useEffect(() => {
-    if (params.id)
-      setCacheKey([`cache`, `update`, `password`, params.id].join(`:`));
-  }, [params]);
   return (
     <CenterRow>
       <form
         onSubmit={handleSubmit(async (vals) => {
-          await svc.updatePasswords(vals, { id: { eq: pwd.id } });
-          cacheKey && window.localStorage.removeItem(cacheKey);
+          await pwd.atomicPatch(vals);
           navigate(-1);
         })}
       >
@@ -66,46 +41,38 @@ export const Update: FC<{ pwd: Password }> = ({ pwd }) => {
             <CenterRow>
               <Grid container direction="row" spacing={2} alignItems="center">
                 <Grid item>
-                  <Controller<UpdatePasswordInput>
+                  <Controller
                     control={control}
                     name="icon"
                     render={({ field }) => (
                       <IconField
                         onConfirm={(val) => {
                           field.onChange(val);
-                          cacheKey &&
-                            window.localStorage.setItem(
-                              cacheKey,
-                              JSON.stringify(getValues())
-                            );
                         }}
-                        value={
-                          typeof field.value === `string` ? field.value : null
-                        }
+                        value={pwd.icon || null}
                       />
                     )}
                   />
                 </Grid>
                 <Grid item>
                   <CenterRow>
-                    <TextField
-                      label="title"
-                      error={!!errors.title}
-                      helperText={errors.title?.message}
-                      InputProps={{
-                        sx: {
-                          fontSize: (theme) => theme.typography.h5.fontSize,
-                        },
-                      }}
-                      {...register(`title`, {
-                        onChange: () => {
-                          cacheKey &&
-                            window.localStorage.setItem(
-                              cacheKey,
-                              JSON.stringify(getValues())
-                            );
-                        },
-                      })}
+                    <Controller
+                      control={control}
+                      name="title"
+                      render={({ field }) => (
+                        <TextField
+                          label="title"
+                          error={!!errors.title}
+                          helperText={errors.title?.message}
+                          InputProps={{
+                            sx: {
+                              fontSize: (theme) => theme.typography.h5.fontSize,
+                            },
+                          }}
+                          defaultValue={pwd.title}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      )}
                     />
                   </CenterRow>
                 </Grid>
@@ -122,38 +89,36 @@ export const Update: FC<{ pwd: Password }> = ({ pwd }) => {
                   spacing={1}
                 >
                   <Grid item>
-                    <TextField
-                      label="Username"
-                      error={!!errors.username}
-                      InputLabelProps={{ shrink: true }}
-                      helperText={errors.username?.message}
-                      {...register(`username`, {
-                        onChange: () => {
-                          cacheKey &&
-                            window.localStorage.setItem(
-                              cacheKey,
-                              JSON.stringify(getValues())
-                            );
-                        },
-                      })}
+                    <Controller
+                      control={control}
+                      name="username"
+                      render={({ field }) => (
+                        <TextField
+                          label="Username"
+                          error={!!errors.username}
+                          InputLabelProps={{ shrink: true }}
+                          helperText={errors.username?.message}
+                          defaultValue={pwd.username}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      )}
                     />
                   </Grid>
                   <Divider />
                   <Grid item>
-                    <TextField
-                      required
-                      label="Password"
-                      error={!!errors.password}
-                      helperText={errors.password?.message}
-                      {...register(`password`, {
-                        onChange: () => {
-                          cacheKey &&
-                            window.localStorage.setItem(
-                              cacheKey,
-                              JSON.stringify(getValues())
-                            );
-                        },
-                      })}
+                    <Controller
+                      control={control}
+                      name="password"
+                      render={({ field }) => (
+                        <TextField
+                          required
+                          label="Password"
+                          error={!!errors.password}
+                          helperText={errors.password?.message}
+                          defaultValue={pwd.password}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      )}
                     />
                   </Grid>
                 </Grid>
@@ -161,48 +126,24 @@ export const Update: FC<{ pwd: Password }> = ({ pwd }) => {
               <Grid item>
                 <Grid container direction="column">
                   <Grid item>
-                    <TextField
-                      label="Website"
-                      InputLabelProps={{ shrink: true }}
-                      error={!!errors.url}
-                      helperText={errors.url?.message}
-                      {...register(`url`, {
-                        onChange: () => {
-                          cacheKey &&
-                            window.localStorage.setItem(
-                              cacheKey,
-                              JSON.stringify(getValues())
-                            );
-                        },
-                      })}
+                    <Controller
+                      control={control}
+                      name="url"
+                      render={({ field }) => (
+                        <TextField
+                          label="Website"
+                          InputLabelProps={{ shrink: true }}
+                          error={!!errors.url}
+                          helperText={errors.url?.message}
+                          defaultValue={pwd.url}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      )}
                     />
                   </Grid>
                 </Grid>
               </Grid>
             </Grid>
-          </Grid>
-          <Grid item>
-            <CenterRow>
-              <FormControl error={!!errors.isLocal}>
-                <FormControlLabel
-                  label="Sync to other machines"
-                  control={
-                    <Controller<UpdatePasswordInput>
-                      control={control}
-                      name="isLocal"
-                      render={({ field }) => (
-                        <Checkbox
-                          defaultChecked={!pwd.isLocal}
-                          onChange={(e) => {
-                            field.onChange(!e.currentTarget.checked);
-                          }}
-                        />
-                      )}
-                    />
-                  }
-                />
-              </FormControl>
-            </CenterRow>
           </Grid>
           <Grid item>
             <Grid container direction="row" spacing={2} justifyContent="center">
@@ -215,19 +156,6 @@ export const Update: FC<{ pwd: Password }> = ({ pwd }) => {
                     disabled={isSubmitting}
                   >
                     save & exit
-                  </Button>
-                </Grid>
-                <Grid item>
-                  <Button
-                    fullWidth
-                    color="warning"
-                    variant="contained"
-                    onClick={() => {
-                      cacheKey && window.localStorage.removeItem(cacheKey);
-                      resetForm();
-                    }}
-                  >
-                    reset
                   </Button>
                 </Grid>
                 <Grid item>

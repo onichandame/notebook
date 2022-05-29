@@ -6,16 +6,18 @@ import {
   DialogContentText,
   DialogTitle,
 } from "@mui/material";
+import { DocumentType } from "@onichandame/type-rxdb";
+import { useSnackbar } from "notistack";
 import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { useService } from "../../../backend";
 import { Password } from "../../../model";
+import { formatError } from "../../../util";
 
-export const Delete: FC<{ pwd: Password }> = ({ pwd }) => {
+export const Delete: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
   const [deleting, setDeleting] = useState(false);
-  const svc = useService();
   const navigate = useNavigate();
+  const { enqueueSnackbar } = useSnackbar();
   return (
     <>
       <Button
@@ -38,12 +40,13 @@ export const Delete: FC<{ pwd: Password }> = ({ pwd }) => {
           <Button
             color="secondary"
             onClick={async () => {
-              setDeleting(false);
-              await svc.updatePasswords(
-                { deletedAt: new Date() },
-                { id: { eq: pwd.id } }
-              );
-              navigate(-1);
+              try {
+                await pwd.atomicPatch({ deletedAt: new Date() });
+                setDeleting(false);
+                navigate(-1);
+              } catch (e) {
+                enqueueSnackbar(formatError(e), { variant: `error` });
+              }
             }}
           >
             yes

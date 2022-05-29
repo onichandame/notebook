@@ -13,25 +13,33 @@ import { FC, useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Actions } from "../../actions";
-import { Loading } from "../../common";
+import { Exception, Loading } from "../../common";
 import { useDb } from "../../db";
 import { Note } from "../../model";
+import { formatError } from "../../util";
 
 export const List: FC = () => {
   const [notes, setNotes] = useState<DocumentType<typeof Note>[] | null>(null);
+  const [err, setErr] = useState<unknown>(null);
   const navigate = useNavigate();
   const db = useDb();
   const updateList = useCallback(async () => {
-    const notes = await db?.notes.find().where(`deletedAt`).exists(false)
-      .exec();
-    if (notes) {
-      setNotes(notes);
+    try {
+      const notes = await db?.notes.find().where(
+        `deletedAt`,
+      ).exists(false)
+        .exec();
+      if (notes) {
+        setNotes(notes);
+      }
+    } catch (e) {
+      setErr(e);
     }
   }, [db]);
   useEffect(() => {
     updateList();
   }, [updateList]);
-  return notes
+  return err ? <Exception message={formatError(err)} /> : notes
     ? (
       notes.length
         ? (

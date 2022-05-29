@@ -10,7 +10,7 @@ import { DocumentType } from "@onichandame/type-rxdb";
 import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Note } from "../../model";
+import { Note } from "../../../model";
 
 export const Delete: FC<{ note: DocumentType<typeof Note> }> = ({ note }) => {
   const navigate = useNavigate();

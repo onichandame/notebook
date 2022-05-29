@@ -1,39 +1,46 @@
 import { classValidatorResolver } from "@hookform/resolvers/class-validator";
-import {
-  Button,
-  Checkbox,
-  FormControl,
-  FormControlLabel,
-  FormHelperText,
-  Grid,
-  TextField,
-} from "@mui/material";
+import { Button, Grid, TextField } from "@mui/material";
+import { IsOptional, IsString } from "class-validator";
 import { FC } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 
-import { useService } from "../../backend";
 import { IconField } from "../../common";
-import { CreatePasswordInput } from "../../model";
+import { useDb } from "../../db";
+import { Password } from "../../model";
 
-const resolver = classValidatorResolver(CreatePasswordInput);
+class CreatePasswordForm implements Partial<Password> {
+  @IsString()
+  title!: string;
+  @IsString()
+  password!: string;
+  @IsOptional()
+  @IsString()
+  icon?: string;
+  @IsOptional()
+  @IsString()
+  url?: string;
+  @IsOptional()
+  @IsString()
+  username?: string;
+}
+
+const resolver = classValidatorResolver(CreatePasswordForm);
 
 export const Create: FC = () => {
   const {
-    register,
-    handleSubmit,
     control,
+    handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<CreatePasswordInput>({
+  } = useForm<CreatePasswordForm>({
     resolver,
-    defaultValues: { isLocal: false },
   });
   const navigate = useNavigate();
-  const svc = useService();
+  const db = useDb();
   return (
     <form
       onSubmit={handleSubmit(async (vals) => {
-        await svc.createPassword(vals);
+        await db?.passwords.insert(vals as any);
         navigate(-1);
       })}
     >
@@ -41,7 +48,7 @@ export const Create: FC = () => {
         <Grid item>
           <Grid container direction="row" spacing={2} justifyContent="center">
             <Grid item>
-              <Controller<CreatePasswordInput>
+              <Controller
                 control={control}
                 name="icon"
                 render={({ field }) => (
@@ -53,70 +60,64 @@ export const Create: FC = () => {
               />
             </Grid>
             <Grid item>
-              <TextField
-                required
-                label="Title"
-                error={!!errors.title}
-                helperText={errors.title?.message}
-                {...register(`title`)}
+              <Controller
+                control={control}
+                name="title"
+                render={({ field }) => (
+                  <TextField
+                    required
+                    label="Title"
+                    error={!!errors.title}
+                    helperText={errors.title?.message}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                )}
               />
             </Grid>
           </Grid>
         </Grid>
         <Grid item>
-          <TextField
-            label="Username"
-            error={!!errors.username}
-            helperText={errors.username?.message}
-            {...register(`username`)}
+          <Controller
+            control={control}
+            name="username"
+            render={({ field }) => (
+              <TextField
+                label="Username"
+                error={!!errors.username}
+                helperText={errors.username?.message}
+                onChange={(e) => field.onChange(e.target.value)}
+              />
+            )}
           />
         </Grid>
         <Grid item>
-          <TextField
-            required
-            label="Password"
-            error={!!errors.password}
-            helperText={errors.password?.message}
-            {...register(`password`)}
+          <Controller
+            control={control}
+            name="password"
+            render={({ field }) => (
+              <TextField
+                required
+                label="Password"
+                error={!!errors.password}
+                helperText={errors.password?.message}
+                onChange={(e) => field.onChange(e.target.value)}
+              />
+            )}
           />
         </Grid>
         <Grid item>
-          <TextField
-            label="Website"
-            error={!!errors.url}
-            helperText={errors.url?.message}
-            {...register(`url`)}
+          <Controller
+            control={control}
+            name="url"
+            render={({ field }) => (
+              <TextField
+                label="Website"
+                error={!!errors.url}
+                helperText={errors.url?.message}
+                onChange={(e) => field.onChange(e.target.value)}
+              />
+            )}
           />
-        </Grid>
-        <Grid item>
-          <FormControl error={!!errors.isLocal}>
-            <Controller<CreatePasswordInput>
-              control={control}
-              name="isLocal"
-              render={({ field }) => (
-                <FormControl error={!!errors.isLocal}>
-                  <FormControlLabel
-                    label="Sync to other peers"
-                    control={
-                      <Controller<CreatePasswordInput>
-                        control={control}
-                        name="isLocal"
-                        render={({ field }) => (
-                          <Checkbox
-                            defaultChecked={true}
-                            onChange={(e) => {
-                              field.onChange(!e.currentTarget.checked);
-                            }}
-                          />
-                        )}
-                      />
-                    }
-                  />
-                </FormControl>
-              )}
-            />
-            <FormHelperText>{errors.isLocal?.message}</FormHelperText>
-          </FormControl>
         </Grid>
         <Grid item>
           <Button type="submit" variant="contained" disabled={isSubmitting}>

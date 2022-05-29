@@ -1,4 +1,4 @@
-import { Lock, NoteAlt, Settings, Sync } from "@mui/icons-material";
+import { Lock, NoteAlt, Sync } from "@mui/icons-material";
 import { ReactElement } from "react";
 
 export class Path {
@@ -9,7 +9,7 @@ export class Path {
     public title: string,
     public link: string,
     parent?: Path,
-    public icon?: ReactElement
+    public icon?: ReactElement,
   ) {
     this.parent = parent;
   }
@@ -47,6 +47,5 @@ const home = new Path(`*`, `My Note`, `/`);
 new Path(`/notes/*`, `Notes`, `/notes`, home, <NoteAlt />);
 new Path(`/passwords/*`, `Passwords`, `/passwords`, home, <Lock />);
 new Path(`/sync/*`, `Sync`, `/sync`, home, <Sync />);
-new Path(`/settings/*`, `Settings`, `/settings`, home, <Settings />);
 
 export { home as root };

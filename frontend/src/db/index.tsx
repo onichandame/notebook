@@ -5,16 +5,22 @@ import { addRxPlugin, createRxDatabase, RxDatabase } from "rxdb";
 import { addPouchPlugin, getRxStoragePouch } from "rxdb/plugins/pouchdb";
 import { RxDBMigrationPlugin } from "rxdb/plugins/migration";
 import { RxDBQueryBuilderPlugin } from "rxdb/plugins/query-builder";
+import { RxDBDevModePlugin } from "rxdb/plugins/dev-mode";
+import * as pai from "pouchdb-adapter-idb";
 
-import { Note } from "../model";
+import { Note, Password } from "../model";
 import { formatError } from "../util";
 
-type Collections = { notes: ReturnCollectionType<typeof Note> };
+type Collections = {
+  notes: ReturnCollectionType<typeof Note>;
+  passwords: ReturnCollectionType<typeof Password>;
+};
 
 type Database = RxDatabase<Collections>;
 
-addPouchPlugin(await import(`pouchdb-adapter-idb`));
+addPouchPlugin(pai);
 
+addRxPlugin(RxDBDevModePlugin);
 addRxPlugin(RxDBMigrationPlugin);
 addRxPlugin(RxDBQueryBuilderPlugin);
 
@@ -28,9 +34,10 @@ export const DbProvider: FC = ({ children }) => {
     (async () => {
       const db = await createRxDatabase<Collections>({
         name: `my_note`,
-        storage: getRxStoragePouch("idb"),
+        storage: getRxStoragePouch("idb", { auto_compaction: true }),
       });
       await addCollection(db, Note);
+      await addCollection(db, Password);
       if (active) {
         setDb(db);
       }
