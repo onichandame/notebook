@@ -4,7 +4,7 @@ import { IsString } from "class-validator";
 import { useSnackbar } from "notistack";
 import Peer, { DataConnection } from "peerjs";
 import { QRCodeSVG } from "qrcode.react";
-import { FC, useCallback, useEffect, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { CenterRow, Loading } from "../common";
@@ -20,6 +20,7 @@ const resolver = classValidatorResolver(PeerForm);
 
 export const Sync: FC = () => {
   const [peer, setPeer] = useState<Peer | null>(null);
+  const [conn, setConn] = useState<DataConnection | null>(null);
   const { enqueueSnackbar } = useSnackbar();
   const db = useDb();
   const [synchronizer, setSynchronizer] = useState<Synchronizer | null>(null);
@@ -29,35 +30,6 @@ export const Sync: FC = () => {
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<PeerForm>({ resolver });
-  const handleConnection = useCallback((conn: DataConnection) => {
-    let handshaked = false;
-    let pending = 2;
-    enqueueSnackbar(`sync request from peer ${conn.peer}`, {
-      variant: `info`,
-      action: (
-        <Button
-          onClick={async () => {
-            handshaked = true;
-            if (synchronizer) {
-              for await (const doc of synchronizer.stream()) {
-                conn.send(JSON.stringify(doc));
-              }
-            }
-          }}
-        >
-          accept
-        </Button>
-      ),
-      onClose: () => {
-        if (!handshaked) conn.close();
-      },
-    });
-    conn.on(`data`, async (data) => {
-      if (!handshaked) conn.close();
-      else if (typeof data !== `string`) conn.close();
-      else if (synchronizer) await synchronizer.sync(JSON.parse(data));
-    });
-  }, [db, synchronizer]);
   useEffect(() => {
     const peer = new Peer(window.crypto.randomUUID(), {
       host: `peerjs-server-xiao.herokuapp.com`,
@@ -70,16 +42,27 @@ export const Sync: FC = () => {
     };
   }, []);
   useEffect(() => {
-    if (handleConnection) {
-      peer?.on(`connection`, handleConnection);
+    let active = true;
+    if (active) {
+      peer?.removeAllListeners(`connection`);
+      peer?.on(`connection`, (conn) => {
+        if (!conn) setConn(conn);
+      });
     }
     return () => {
-      peer?.removeAllListeners(`connection`);
+      active = false;
     };
-  }, [peer, handleConnection]);
+  }, [peer, conn]);
   useEffect(() => {
-    if (db) setSynchronizer(new Synchronizer(db));
-  }, [db]);
+    (async () => {
+      if (db && conn) {
+        let sync = new Synchronizer(db);
+        setSynchronizer(sync);
+        for await (const doc of sync.stream()) conn.send(JSON.stringify(doc));
+        // TODO sync
+      }
+    })();
+  }, [conn, db]);
   return peer
     ? (
       <CenterRow>
@@ -108,9 +91,10 @@ export const Sync: FC = () => {
           <Grid item>
             <form
               onSubmit={handleSubmit(async (vals) => {
-                const conn = peer?.connect(vals.id);
+                const conn = peer.connect(vals.id);
+                setConn(conn);
                 let pending = 2;
-                conn?.on(`open`, async () => {
+                conn.on(`open`, async () => {
                   conn.on(`data`, async (data) => {
                     if (data === `END`) {
                       pending--;
