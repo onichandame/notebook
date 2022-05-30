@@ -22,18 +22,20 @@ export const QrField: FC<Props> = ({ onConfirm }) => {
             justifyContent: "center",
           }}
         >
-          <CenterRow>
-            <QrReader
-              delay={100}
-              onUpdate={(_, res) => {
-                if (res) {
-                  console.log(res);
-                  onConfirm(res.getText());
-                  setOpen(false);
-                }
-              }}
-            />
-          </CenterRow>
+          <div>
+            <CenterRow>
+              <QrReader
+                delay={100}
+                onUpdate={(_, res) => {
+                  if (res) {
+                    console.log(res);
+                    onConfirm(res.getText());
+                    setOpen(false);
+                  }
+                }}
+              />
+            </CenterRow>
+          </div>
         </Modal>
       </CenterRow>
     </>
