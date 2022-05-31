@@ -16,7 +16,7 @@ type Collections = {
   passwords: ReturnCollectionType<typeof Password>;
 };
 
-type Database = RxDatabase<Collections>;
+export type Database = RxDatabase<Collections>;
 
 addPouchPlugin(pai);
 
@@ -46,11 +46,7 @@ export const DbProvider: FC = ({ children }) => {
       active = false;
     };
   }, []);
-  return (
-    <DbContext.Provider value={db}>
-      {children}
-    </DbContext.Provider>
-  );
+  return <DbContext.Provider value={db}>{children}</DbContext.Provider>;
 };
 
 export const useDb = () => useContext(DbContext);
