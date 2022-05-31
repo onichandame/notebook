@@ -32,7 +32,7 @@ export const Update: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
     <CenterRow>
       <form
         onSubmit={handleSubmit(async (vals) => {
-          await pwd.atomicPatch(vals);
+          await pwd.atomicPatch({ ...vals, updatedAt: new Date() });
           navigate(-1);
         })}
       >

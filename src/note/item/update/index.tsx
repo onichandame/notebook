@@ -39,7 +39,7 @@ export const Update: FC<{ note: DocumentType<typeof Note> }> = ({ note }) => {
     <form
       onSubmit={handleSubmit(async (vals) => {
         try {
-          await note.atomicPatch(vals);
+          await note.atomicPatch({ ...vals, updatedAt: new Date() });
           navigate(-1);
         } catch (e) {
           enqueueSnackbar(formatError(e), { variant: `error` });

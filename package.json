@@ -7,6 +7,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
+  "resolutions": {
+    "@types/react": "^17"
+  },
   "dependencies": {
     "@emotion/react": "^11.7.1",
     "@emotion/styled": "^11.6.0",
@@ -31,7 +34,6 @@
     "react-markdown": "^7.1.2",
     "react-qr-barcode-scanner": "^1.0.6",
     "react-router-dom": "^6.2.1",
-    "rollup-plugin-swc": "^0.2.1",
     "rxdb": "^12.4.2",
     "rxjs": "^7.5.5"
   },
@@ -43,8 +45,10 @@
     "@types/react": "^17.0.33",
     "@types/react-dom": "^17.0.10",
     "@types/validator": "^13.7.2",
-    "@vitejs/plugin-react": "^1.0.7",
+    "prettier": "^2.6.2",
     "typescript": "^4.4.4",
-    "vite": "^2.7.2"
+    "vite": "^2.7.2",
+    "vite-plugin-pwa": "^0.12.0",
+    "vite-plugin-swc-react": "^0.1.12"
   }
 }
