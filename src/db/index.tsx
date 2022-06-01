@@ -8,12 +8,13 @@ import { RxDBQueryBuilderPlugin } from "rxdb/plugins/query-builder";
 import { RxDBDevModePlugin } from "rxdb/plugins/dev-mode";
 import * as pai from "pouchdb-adapter-idb";
 
-import { Note, Password } from "../model";
+import { Note, Password, Peer } from "../model";
 import { formatError } from "../util";
 
 type Collections = {
   notes: ReturnCollectionType<typeof Note>;
   passwords: ReturnCollectionType<typeof Password>;
+  peers: ReturnCollectionType<typeof Peer>;
 };
 
 export type Database = RxDatabase<Collections>;
@@ -38,6 +39,7 @@ export const DbProvider: FC = ({ children }) => {
       });
       await addCollection(db, Note);
       await addCollection(db, Password);
+      await addCollection(db, Peer);
       if (active) {
         setDb(db);
       }

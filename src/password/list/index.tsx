@@ -13,22 +13,24 @@ import { FC, useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Actions } from "../../actions";
-import { Exception, Loading } from "../../common";
+import { Exception, Loading, PlaceHolder } from "../../common";
 import { useDb } from "../../db";
 import { Password } from "../../model";
 import { formatError } from "../../util";
-import { PlaceHolder } from "./placeholder";
 
 export const List: FC = () => {
   const [pwds, setPwds] = useState<DocumentType<typeof Password>[] | null>(
-    null,
+    null
   );
   const [err, setErr] = useState<unknown>(null);
   const navigate = useNavigate();
   const db = useDb();
   const updatePwds = useCallback(async () => {
     try {
-      const pwds = await db?.passwords.find().where(`deletedAt`).exists(false)
+      const pwds = await db?.passwords
+        .find()
+        .where(`deletedAt`)
+        .exists(false)
         .exec();
       if (pwds) {
         setPwds(pwds);
@@ -40,55 +42,63 @@ export const List: FC = () => {
   useEffect(() => {
     updatePwds();
   }, [updatePwds]);
-  return err ? <Exception message={formatError(err)} /> : pwds
-    ? (
-      pwds.length
-        ? (
-          <>
-            <Grid
-              container
-              direction="row"
-              spacing={3}
-              justifyContent="start"
-              flexGrow={1}
-            >
-              {pwds.map((pwd) => (
-                <Grid item key={pwd.id}>
-                  <Card sx={{ minWidth: 180 }}>
-                    <CardActionArea
-                      onClick={() => {
-                        navigate(pwd.id.toString());
-                      }}
-                    >
-                      <CardMedia
-                        component="img"
-                        height="150"
-                        image={pwd.icon ||
-                          "https://media.wired.com/photos/5926e34f8d4ebc5ab806bd1c/master/pass/GettyImages-528338761.jpg"}
-                        alt={pwd.title}
-                      />
-                      <CardContent>
-                        <Typography variant="h5" align="center">
-                          {pwd.title}
-                        </Typography>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
-                </Grid>
-              ))}
+  return err ? (
+    <Exception message={formatError(err)} />
+  ) : pwds ? (
+    pwds.length ? (
+      <>
+        <Grid
+          container
+          direction="row"
+          spacing={3}
+          justifyContent="start"
+          flexGrow={1}
+        >
+          {pwds.map((pwd) => (
+            <Grid item key={pwd.id}>
+              <Card sx={{ minWidth: 180 }}>
+                <CardActionArea
+                  onClick={() => {
+                    navigate(pwd.id.toString());
+                  }}
+                >
+                  <CardMedia
+                    component="img"
+                    height="150"
+                    image={
+                      pwd.icon ||
+                      "https://media.wired.com/photos/5926e34f8d4ebc5ab806bd1c/master/pass/GettyImages-528338761.jpg"
+                    }
+                    alt={pwd.title}
+                  />
+                  <CardContent>
+                    <Typography variant="h5" align="center">
+                      {pwd.title}
+                    </Typography>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
             </Grid>
-            <Actions>
-              <SpeedDialAction
-                icon={<Add />}
-                tooltipTitle="Create"
-                onClick={() => {
-                  navigate(`create`);
-                }}
-              />
-            </Actions>
-          </>
-        )
-        : <PlaceHolder />
+          ))}
+        </Grid>
+        <Actions>
+          <SpeedDialAction
+            icon={<Add />}
+            tooltipTitle="Create"
+            onClick={() => {
+              navigate(`create`);
+            }}
+          />
+        </Actions>
+      </>
+    ) : (
+      <PlaceHolder
+        entityName="password"
+        collectionName="password vault"
+        link="create"
+      />
     )
-    : <Loading />;
+  ) : (
+    <Loading />
+  );
 };

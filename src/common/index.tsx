@@ -1,4 +1,5 @@
 export * from "./center";
+export * from "./placeholder";
 export * from "./clipboard";
 export * from "./iconField";
 export * from "./exception";

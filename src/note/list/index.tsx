@@ -13,7 +13,7 @@ import { FC, useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Actions } from "../../actions";
-import { Exception, Loading } from "../../common";
+import { Exception, Loading, PlaceHolder } from "../../common";
 import { useDb } from "../../db";
 import { Note } from "../../model";
 import { formatError } from "../../util";
@@ -25,9 +25,10 @@ export const List: FC = () => {
   const db = useDb();
   const updateList = useCallback(async () => {
     try {
-      const notes = await db?.notes.find().where(
-        `deletedAt`,
-      ).exists(false)
+      const notes = await db?.notes
+        .find()
+        .where(`deletedAt`)
+        .exists(false)
         .exec();
       if (notes) {
         setNotes(notes);
@@ -39,60 +40,61 @@ export const List: FC = () => {
   useEffect(() => {
     updateList();
   }, [updateList]);
-  return err ? <Exception message={formatError(err)} /> : notes
-    ? (
-      notes.length
-        ? (
-          <>
-            <Grid
-              container
-              direction="row"
-              spacing={3}
-              justifyContent="start"
-              flexGrow={1}
-            >
-              {notes.map((note) => (
-                <Grid item key={`note${note.id}`}>
-                  <Card sx={{ minWidth: 180 }} variant="outlined">
-                    <CardActionArea
-                      onClick={() => {
-                        navigate(note.id.toString());
-                      }}
-                    >
-                      <CardHeader
-                        title={note.title}
-                        subheader={new Date(note.createdAt)
-                          .toLocaleDateString()}
-                      />
-                      <CardContent>
-                        <Typography>
-                          {note.content && (note.content.length < 10
-                            ? note.content
-                            : `${note.content.slice(0, 7)}...`)}
-                        </Typography>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
-                </Grid>
-              ))}
+  return err ? (
+    <Exception message={formatError(err)} />
+  ) : notes ? (
+    notes.length ? (
+      <>
+        <Grid
+          container
+          direction="row"
+          spacing={3}
+          justifyContent="start"
+          flexGrow={1}
+        >
+          {notes.map((note) => (
+            <Grid item key={`note${note.id}`}>
+              <Card sx={{ minWidth: 180 }} variant="outlined">
+                <CardActionArea
+                  onClick={() => {
+                    navigate(note.id.toString());
+                  }}
+                >
+                  <CardHeader
+                    title={note.title}
+                    subheader={new Date(note.createdAt).toLocaleDateString()}
+                  />
+                  <CardContent>
+                    <Typography>
+                      {note.content &&
+                        (note.content.length < 10
+                          ? note.content
+                          : `${note.content.slice(0, 7)}...`)}
+                    </Typography>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
             </Grid>
-            <Actions>
-              <SpeedDialAction
-                icon={<Add />}
-                tooltipTitle="Create"
-                onClick={() => {
-                  navigate(`create`);
-                }}
-              />
-            </Actions>
-          </>
-        )
-        : (
-          <Typography variant="h5">
-            you don't have any notes here,{" "}
-            <Link to="create">create one now</Link>!
-          </Typography>
-        )
+          ))}
+        </Grid>
+        <Actions>
+          <SpeedDialAction
+            icon={<Add />}
+            tooltipTitle="Create"
+            onClick={() => {
+              navigate(`create`);
+            }}
+          />
+        </Actions>
+      </>
+    ) : (
+      <PlaceHolder
+        entityName="note"
+        collectionName="notes store"
+        link="create"
+      />
     )
-    : <Loading />;
+  ) : (
+    <Loading />
+  );
 };
