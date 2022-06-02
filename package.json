@@ -28,8 +28,6 @@
     "class-validator": "^0.13.2",
     "events": "^3.3.0",
     "firebase": "^9.8.1",
-    "graphql": "^16.2.0",
-    "graphql-ws": "^5.5.5",
     "it-map": "^1.0.6",
     "it-pipe": "^2.0.3",
     "libp2p": "^0.37.2",

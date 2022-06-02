@@ -5,11 +5,10 @@ import {
   Grid,
   Typography,
 } from '@mui/material'
-import { QRCodeSVG } from 'qrcode.react'
 import { FC, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { CenterRow, Loading, PlaceHolder } from '../../common'
+import { CenterRow, Loading, PlaceHolder, QrCode } from '../../common'
 import { useDb } from '../../db'
 import { Peer } from '../../model'
 import { useSync } from '../../synchronizer'
@@ -25,56 +24,53 @@ export const List: FC = () => {
       .exec()
       .then(peers => setPeers(peers))
   }, [db])
-  return peers ? (
-    peers.length ? (
-      <Grid
-        container
-        direction="row"
-        justifyContent="start"
-        spacing={3}
-        flexGrow={1}
-      >
-        {peers.map(peer => (
-          <Grid item key={peer.id}>
-            <Card sx={{ minWidth: 180 }}>
-              <CardActionArea onClick={() => navigate(peer.id)}>
-                <CardContent>
-                  <Typography variant="h5" align="center">
-                    {peer.id}
-                  </Typography>
-                </CardContent>
-              </CardActionArea>
-            </Card>
+  return sync && peers ? (
+    <Grid container direction="column" spacing={5}>
+      {peers.length ? (
+        <Grid item>
+          <Grid
+            container
+            direction="row"
+            justifyContent="start"
+            spacing={3}
+            flexGrow={1}
+          >
+            {peers.map(peer => (
+              <Grid item key={peer.id}>
+                <Card sx={{ maxWidth: 180 }}>
+                  <CardActionArea onClick={() => navigate(peer.id)}>
+                    <CardContent>
+                      <Typography variant="h5" align="center">
+                        {peer.id}
+                      </Typography>
+                    </CardContent>
+                  </CardActionArea>
+                </Card>
+              </Grid>
+            ))}
           </Grid>
-        ))}
-      </Grid>
-    ) : (
-      <Grid container direction="column" spacing={5}>
+        </Grid>
+      ) : (
         <Grid item>
           <PlaceHolder
             entityName="peer"
-            collectionName="peers list"
             link="create"
+            collectionName="peer list"
           />
         </Grid>
-        {sync && (
-          <Grid item>
-            <CenterRow>
-              <QRCodeSVG
-                value={sync?.id}
-                imageSettings={{
-                  src: `https://cdn-icons-png.flaticon.com/512/1621/1621635.png`,
-                  width: 20,
-                  height: 20,
-
-                  excavate: true,
-                }}
-              />
-            </CenterRow>
-          </Grid>
-        )}
+      )}
+      <Grid item>
+        <Typography variant="h6" maxWidth="80vw" overflow="auto">
+          My ID: {sync.id}
+        </Typography>
       </Grid>
-    )
+      <Grid item>
+        <Typography variant="h6">My addresses:</Typography>
+        <CenterRow>
+          <QrCode value={JSON.stringify(sync.multiaddrs)} />
+        </CenterRow>
+      </Grid>
+    </Grid>
   ) : (
     <Loading />
   )

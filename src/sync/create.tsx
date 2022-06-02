@@ -4,7 +4,7 @@ import { Multiaddr } from '@multiformats/multiaddr'
 import { IsString } from 'class-validator'
 import { useSnackbar } from 'notistack'
 import { FC } from 'react'
-import { Controller, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 
 import { CenterRow } from '../common'
@@ -16,6 +16,8 @@ import { formatError } from '../util'
 class CreatePeerForm {
   @IsString()
   id!: string
+  @IsString({ each: true })
+  multiaddrs!: string[]
 }
 
 const resolver = classValidatorResolver(CreatePeerForm)
@@ -27,23 +29,15 @@ export const Create: FC = () => {
   const { enqueueSnackbar } = useSnackbar()
   const {
     setValue,
-    register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    getValues,
+    formState: { isSubmitting },
   } = useForm<CreatePeerForm>({ resolver })
-  const getId = (addr: string) => {
-    const id = new Multiaddr(addr).getPeerId()
-    if (!id) throw new Error(`address ${addr} not valid`)
-    return id
-  }
   return (
     <form
-      onSubmit={handleSubmit(async ({ id }) => {
+      onSubmit={handleSubmit(async vals => {
         try {
-          const peer = await db?.peers.insert({
-            id: getId(id),
-            multiaddrs: [id],
-          })
+          const peer = await db?.peers.insert(vals)
           if (peer) sync?.connectToPeer(peer)
           navigate(-1)
         } catch (e) {
@@ -53,20 +47,23 @@ export const Create: FC = () => {
     >
       <Grid container direction="column" alignItems="center" spacing={2}>
         <Grid item>
-          <TextField
-            label="Peer ID"
-            error={!!errors.id}
-            helperText={errors.id?.message}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <QrField onConfirm={val => setValue(`id`, val)} />
-                </InputAdornment>
-              ),
+          <QrField
+            onConfirm={raw => {
+              try {
+                const multiaddrs: string[] = JSON.parse(raw)
+                if (!multiaddrs.length) throw new Error(`no addresses received`)
+                const id = new Multiaddr(multiaddrs[0]).getPeerId()
+                if (!id) throw new Error(`peer id not valid`)
+                setValue(`id`, id)
+                setValue(`multiaddrs`, multiaddrs)
+                console.log(id, multiaddrs)
+              } catch (e) {
+                console.error(e)
+              }
             }}
-            {...register(`id`)}
           />
         </Grid>
+        <Grid item>{getValues().id}</Grid>
         <Grid item>
           <CenterRow>
             <Button type="submit" variant="contained" disabled={isSubmitting}>

@@ -5690,22 +5690,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"graphql-ws@npm:^5.5.5":
-  version: 5.8.1
-  resolution: "graphql-ws@npm:5.8.1"
-  peerDependencies:
-    graphql: ">=0.11 <=16"
-  checksum: 0e8d08a1155204655510f8dc902f295ae5494cf01390c87226cef8d9b460fac5101ec96802ccf056d479d7e57a2a6b575fc4769b2123ae330396ac1d44912a8a
-  languageName: node
-  linkType: hard
-
-"graphql@npm:^16.2.0":
-  version: 16.4.0
-  resolution: "graphql@npm:16.4.0"
-  checksum: 8cac2c466891b6c6ace2fa3807f93815dea53cbec372998c139e796a321a6882c2324cc605e5f9aa45356890239aa9e731a04d8c59ec524db82bd18fb48aafee
-  languageName: node
-  linkType: hard
-
 "has-bigints@npm:^1.0.1, has-bigints@npm:^1.0.2":
   version: 1.0.2
   resolution: "has-bigints@npm:1.0.2"
@@ -7553,8 +7537,6 @@ __metadata:
     class-validator: ^0.13.2
     events: ^3.3.0
     firebase: ^9.8.1
-    graphql: ^16.2.0
-    graphql-ws: ^5.5.5
     it-map: ^1.0.6
     it-pipe: ^2.0.3
     libp2p: ^0.37.2

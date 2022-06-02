@@ -1,12 +1,13 @@
 import { Noise } from '@chainsafe/libp2p-noise'
+import { IncomingStreamData } from '@libp2p/interfaces/registrar'
 import { Bootstrap } from '@libp2p/bootstrap'
-import { Stream } from '@libp2p/interfaces/connection'
+import { Connection } from '@libp2p/interfaces/connection'
 import { PeerId } from '@libp2p/interfaces/peer-id'
 import { Mplex } from '@libp2p/mplex'
-import { CID } from 'multiformats'
+import { Multiaddr } from '@multiformats/multiaddr'
 import {
+  createEd25519PeerId,
   createFromProtobuf,
-  createSecp256k1PeerId,
   exportToProtobuf,
 } from '@libp2p/peer-id-factory'
 import { WebRTCStar } from '@libp2p/webrtc-star'
@@ -25,7 +26,12 @@ import { Peer } from '../../model'
 
 export class Synchronizer extends EventEmitter {
   private syncProtocol = `/sync/1.0` as const
+  private handshakeProtocol = `/handshake/1.0` as const
   private updateEvent = `update` as const
+  private disconnectEvent = `disconnect` as const
+  private handshakeInitEvent = `handshake:init` as const
+  private handshakeDenyEvent = `handshake:deny` as const
+  private handshakeAcceptEvent = `handshake:accept` as const
 
   /** DO NOT instantiate directly using the constructor! use {@link Synchronizer.create} instead */
   constructor(private db: Database, private libp2p: Libp2p) {
@@ -37,7 +43,7 @@ export class Synchronizer extends EventEmitter {
     let peerId: PeerId
     const refreshId = async () => {
       window.localStorage.removeItem(idCacheKey)
-      const peerId = await createSecp256k1PeerId()
+      const peerId = await createEd25519PeerId()
       if (!peerId.privateKey || !peerId.publicKey)
         throw new Error(`failed to create identity keypair`)
       window.localStorage.setItem(
@@ -92,7 +98,10 @@ export class Synchronizer extends EventEmitter {
       ],
     })
     libp2p.connectionManager.addEventListener(`peer:connect`, e => {
-      console.log(e.detail.remotePeer)
+      console.log(`connected to ${e.detail.remotePeer.toString()}`)
+    })
+    libp2p.connectionManager.addEventListener(`peer:disconnect`, e => {
+      console.log(`disconnected to ${e.detail.remotePeer.toString()}`)
     })
     const synchronizer = new this(db, libp2p)
     await synchronizer.init()
@@ -101,6 +110,7 @@ export class Synchronizer extends EventEmitter {
 
   public send<T extends Base>(doc: DocumentType<{ new (): T }> & T) {
     this.emit(this.updateEvent, {
+      type: `sync`,
       collectionName: doc.collection.name,
       doc: doc,
     } as SyncPayload)
@@ -108,101 +118,159 @@ export class Synchronizer extends EventEmitter {
 
   public async destroy() {
     await this.libp2p.stop()
+    this.removeAllListeners()
   }
 
   public async connectToPeer(peer: Peer) {
-    const abortController = new AbortController()
-    setTimeout(() => {
-      abortController.abort()
-    }, 2000)
-    for await (const provider of this.libp2p.dht.findProviders(
-      CID.parse(peer.id),
-      { signal: abortController.signal }
-    )) {
-      if (provider.name === `PROVIDER`) {
-        const prov = provider.providers[0]
-        if (!prov) throw new Error(`peer not found`)
-        const { stream } = await this.libp2p.dialProtocol(
-          prov.id,
-          this.syncProtocol
-        )
-        await this.sendAllToStream(stream)
-        this.listenToStream(stream)
-        break
-      }
+    if (!peer.multiaddrs || !peer.multiaddrs.length) return
+    let connection: Connection | null = null
+    for (const multiaddr of peer.multiaddrs) {
+      const abortController = new AbortController()
+      setTimeout(() => {
+        abortController.abort()
+      }, 100000)
+      connection = await this.libp2p.dial(new Multiaddr(multiaddr), {
+        signal: abortController.signal,
+      })
+      break
     }
-  }
-
-  public get id() {
-    return this.libp2p.peerId.toString()
-  }
-
-  private async init() {
-    await this.libp2p.handle(this.syncProtocol, async e => {
-      const peerId = e.connection.remotePeer.toCID().toString()
-      if (await this.db.peers.findOne().where(`id`).eq(peerId).exec()) {
-        await this.sendAllToStream(e.stream)
-        this.listenToStream(e.stream)
-      } else e.connection.close()
-    })
-    await this.libp2p.start()
-    console.log(this.libp2p.getMultiaddrs().map(v => v.toString()))
-    const peers = await this.db.peers.find().exec()
-    await Promise.all(peers.map(async peer => this.connectToPeer(peer)))
-  }
-
-  private async sendAllToStream(stream: Stream) {
-    await pipe(
-      this.genSyncableItems(),
+    if (!connection) throw new Error(`failed to connect to peer ${peer.id}`)
+    const { stream: handshake } = await connection.newStream(
+      this.handshakeProtocol
+    )
+    let handshaked = false
+    for await (const hs of handshake.source) {
+      if (new TextDecoder().decode(hs) === `OK`) handshaked = true
+      break
+    }
+    handshake.close()
+    if (!handshaked) {
+      connection.close()
+      throw new Error(`handshake to peer ${peer.id} rejected`)
+    }
+    const { stream: sync } = await connection.newStream(this.syncProtocol)
+    const that = this
+    pipe(
+      async function* () {
+        for await (const item of that.genSyncableItems()) yield item
+      },
       source =>
         map(source, item => new TextEncoder().encode(JSON.stringify(item))),
-      stream.sink
+      sync.sink
     )
-  }
-
-  private async listenToStream(stream: Stream) {
-    const handler = (payload: SyncPayload) => {
-      pipe(
-        [payload],
-        source =>
-          map(source, payload =>
-            new TextEncoder().encode(JSON.stringify(payload))
-          ),
-        stream.sink
-      )
-    }
-    this.on(this.updateEvent, handler)
-    await pipe(
-      stream.source,
+    pipe(
+      sync.source,
       source =>
         map(
           source,
           raw => JSON.parse(new TextDecoder().decode(raw)) as SyncPayload
         ),
       async source => {
-        for await (const payload of source) {
-          const collection: ReturnCollectionType<typeof Base> =
-            this.db[payload.collectionName]
-          if (isRxCollection(collection)) {
-            const local = await collection
-              .findOne()
-              .where(`id`)
-              .eq(payload.doc.id)
-              .exec()
-            if (
-              !local ||
-              (payload.doc.updatedAt &&
-                (!local.updatedAt ||
-                  compareDates(payload.doc.updatedAt, local.updatedAt)))
-            ) {
-              await collection.atomicUpsert(payload.doc)
-            }
-          }
-        }
+        for await (const p of source) await this.sync(p)
       }
-    ).finally(() => {
-      this.removeListener(this.updateEvent, handler)
+    )
+  }
+
+  public get id() {
+    return this.libp2p.peerId.toString()
+  }
+
+  public get multiaddrs() {
+    return this.libp2p.getMultiaddrs().map(v => v.toString())
+  }
+
+  on(
+    ev:
+      | typeof this.handshakeInitEvent
+      | typeof this.handshakeAcceptEvent
+      | typeof this.handshakeDenyEvent,
+    cb: (payload: IncomingStreamData) => void
+  ): this
+  on(ev: typeof this.disconnectEvent, cb: (peerId: string) => void): this
+  on(ev: typeof this.updateEvent, cb: (payload: SyncPayload) => void): this
+  on(ev: string, cb: (payload: any) => void) {
+    return super.on(ev, cb)
+  }
+
+  emit(
+    ev:
+      | typeof this.handshakeInitEvent
+      | typeof this.handshakeAcceptEvent
+      | typeof this.handshakeDenyEvent,
+    payload: IncomingStreamData
+  ): boolean
+  emit(ev: typeof this.disconnectEvent, peerId: string): boolean
+  emit(ev: typeof this.updateEvent, payload: SyncPayload): boolean
+  emit(ev: string, payload: any) {
+    return super.emit(ev, payload)
+  }
+
+  private async init() {
+    await this.libp2p.handle(this.handshakeProtocol, async e => {
+      const peer = await this.db.peers
+        .findOne()
+        .where(`id`)
+        .eq(e.connection.remotePeer.toString())
+        .exec()
+      if (!peer) {
+        this.emit(this.handshakeInitEvent, e)
+      } else
+        await pipe(function* () {
+          yield new TextEncoder().encode(`OK`)
+        }, e.stream.sink)
     })
+    await this.libp2p.handle(this.syncProtocol, async e => {
+      const peerId = e.connection.remotePeer.toString()
+      if (await this.db.peers.findOne().where(`id`).eq(peerId).exec()) {
+        pipe(
+          e.stream.source,
+          source =>
+            map(
+              source,
+              raw => JSON.parse(new TextDecoder().decode(raw)) as SyncPayload
+            ),
+          async source => {
+            for await (const payload of source) await this.sync(payload)
+          }
+        )
+        const that = this
+        pipe(
+          async function* () {
+            for await (const item of that.genSyncableItems()) yield item
+            console.log(EventEmitter.on)
+            for await (const [item] of EventEmitter.on(that, that.updateEvent))
+              yield item
+          },
+          source =>
+            map(source, item => new TextEncoder().encode(JSON.stringify(item))),
+          e.stream.sink
+        )
+      } else {
+        e.connection.close()
+      }
+    })
+    await this.libp2p.start()
+    console.log(this.libp2p.getMultiaddrs().map(v => v.toString()))
+  }
+
+  private async sync(payload: SyncPayload) {
+    const collection: ReturnCollectionType<typeof Base> =
+      this.db[payload.collectionName]
+    if (isRxCollection(collection)) {
+      const local = await collection
+        .findOne()
+        .where(`id`)
+        .eq(payload.doc.id)
+        .exec()
+      if (
+        !local ||
+        (payload.doc.updatedAt &&
+          (!local.updatedAt ||
+            compareDates(payload.doc.updatedAt, local.updatedAt)))
+      ) {
+        await collection.atomicUpsert(payload.doc)
+      }
+    }
   }
 
   private async *genSyncableItems() {
