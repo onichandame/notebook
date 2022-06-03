@@ -6,26 +6,32 @@ import {
   DialogContentText,
   DialogTitle,
 } from '@mui/material'
-import { FC, useState } from 'react'
+import { ComponentProps, FC, useState } from 'react'
 
-export const Confirm: FC<{
+type Props = {
   optimistic?: boolean
-  buttonText: string
   title: string
   description: string
   onYes: () => Promise<void> | void
-}> = ({ optimistic, title, description, onYes, buttonText }) => {
+} & ComponentProps<typeof Button>
+
+export const Confirm: FC<Props> = ({
+  optimistic,
+  title,
+  description,
+  onYes,
+  ...other
+}) => {
   const [open, setOpen] = useState(false)
   return (
     <>
       <Button
+        {...other}
         variant="contained"
         onClick={() => {
           setOpen(true)
         }}
-      >
-        {buttonText}
-      </Button>
+      />
       <Dialog
         open={open}
         onClose={() => {
@@ -50,7 +56,7 @@ export const Confirm: FC<{
               await onYes()
               setOpen(false)
             }}
-            color={optimistic ? `primary` : 'warning'}
+            color={optimistic ? `primary` : 'secondary'}
           >
             yes
           </Button>

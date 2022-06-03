@@ -23,6 +23,7 @@
     "@mui/icons-material": "^5.2.5",
     "@mui/material": "^5.2.7",
     "@multiformats/multiaddr": "^10.1.8",
+    "@onichandame/channel": "^0.1.0",
     "@onichandame/type-rxdb": "^0.1.7",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.13.2",

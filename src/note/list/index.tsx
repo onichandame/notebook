@@ -1,4 +1,4 @@
-import { Add } from "@mui/icons-material";
+import { Add } from '@mui/icons-material'
 import {
   Card,
   CardActionArea,
@@ -7,39 +7,40 @@ import {
   Grid,
   SpeedDialAction,
   Typography,
-} from "@mui/material";
-import { DocumentType } from "@onichandame/type-rxdb";
-import { FC, useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+} from '@mui/material'
+import { DocumentType } from '@onichandame/type-rxdb'
+import { FC, useCallback, useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 
-import { Actions } from "../../actions";
-import { Exception, Loading, PlaceHolder } from "../../common";
-import { useDb } from "../../db";
-import { Note } from "../../model";
-import { formatError } from "../../util";
+import { Actions } from '../../actions'
+import { CenterRow, Exception, Loading, PlaceHolder } from '../../common'
+import { useDb } from '../../db'
+import { Note } from '../../model'
+import { formatError } from '../../util'
 
 export const List: FC = () => {
-  const [notes, setNotes] = useState<DocumentType<typeof Note>[] | null>(null);
-  const [err, setErr] = useState<unknown>(null);
-  const navigate = useNavigate();
-  const db = useDb();
+  const [notes, setNotes] = useState<DocumentType<typeof Note>[] | null>(null)
+  const [err, setErr] = useState<unknown>(null)
+  const navigate = useNavigate()
+  const db = useDb()
   const updateList = useCallback(async () => {
     try {
       const notes = await db?.notes
         .find()
+        .sort({ createdAt: `asc` })
         .where(`deletedAt`)
         .exists(false)
-        .exec();
+        .exec()
       if (notes) {
-        setNotes(notes);
+        setNotes(notes)
       }
     } catch (e) {
-      setErr(e);
+      setErr(e)
     }
-  }, [db]);
+  }, [db])
   useEffect(() => {
-    updateList();
-  }, [updateList]);
+    updateList()
+  }, [updateList])
   return err ? (
     <Exception message={formatError(err)} />
   ) : notes ? (
@@ -52,12 +53,12 @@ export const List: FC = () => {
           justifyContent="start"
           flexGrow={1}
         >
-          {notes.map((note) => (
+          {notes.map(note => (
             <Grid item key={`note${note.id}`}>
               <Card sx={{ minWidth: 180 }} variant="outlined">
                 <CardActionArea
                   onClick={() => {
-                    navigate(note.id.toString());
+                    navigate(note.id.toString())
                   }}
                 >
                   <CardHeader
@@ -82,19 +83,19 @@ export const List: FC = () => {
             icon={<Add />}
             tooltipTitle="Create"
             onClick={() => {
-              navigate(`create`);
+              navigate(`create`)
             }}
           />
         </Actions>
       </>
     ) : (
-      <PlaceHolder
-        entityName="note"
-        collectionName="notes store"
-        link="create"
-      />
+      <CenterRow>
+        <PlaceHolder>
+          <Link to="create">Create your first note!</Link>
+        </PlaceHolder>
+      </CenterRow>
     )
   ) : (
     <Loading />
-  );
-};
+  )
+}

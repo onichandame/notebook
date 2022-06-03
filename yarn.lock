@@ -2709,6 +2709,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@onichandame/channel@npm:^0.1.0":
+  version: 0.1.0
+  resolution: "@onichandame/channel@npm:0.1.0"
+  dependencies:
+    events: ^3.3.0
+  checksum: 24f772caebf07b09b64fcc62c3de6986c2678d45042335cb083c553abf1f61627ecc558acebff5c38570b73445e800f9567301f0517c7cb6093a532e985b51f0
+  languageName: node
+  linkType: hard
+
 "@onichandame/type-rxdb@npm:^0.1.7":
   version: 0.1.7
   resolution: "@onichandame/type-rxdb@npm:0.1.7"
@@ -7525,6 +7534,7 @@ __metadata:
     "@mui/icons-material": ^5.2.5
     "@mui/material": ^5.2.7
     "@multiformats/multiaddr": ^10.1.8
+    "@onichandame/channel": ^0.1.0
     "@onichandame/type-rxdb": ^0.1.7
     "@swc/core": ^1.2.194
     "@types/events": ^3.0.0

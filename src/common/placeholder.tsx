@@ -1,16 +1,6 @@
-import { Typography } from "@mui/material";
-import { FC } from "react";
-import { Link } from "react-router-dom";
+import { Typography } from '@mui/material'
+import { FC } from 'react'
 
-export const PlaceHolder: FC<{
-  entityName: string;
-  link: string;
-  collectionName?: string;
-}> = ({ entityName, link, collectionName }) => {
-  return (
-    <Typography variant="h5">
-      Your {collectionName || entityName} is empty,{" "}
-      {<Link to={link}>click</Link>} to add your first {entityName}!
-    </Typography>
-  );
-};
+export const PlaceHolder: FC = ({ children }) => {
+  return <Typography variant="h5">{children}</Typography>
+}

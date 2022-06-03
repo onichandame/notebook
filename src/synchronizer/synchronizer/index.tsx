@@ -1,7 +1,6 @@
 import { Noise } from '@chainsafe/libp2p-noise'
-import { IncomingStreamData } from '@libp2p/interfaces/registrar'
 import { Bootstrap } from '@libp2p/bootstrap'
-import { Connection } from '@libp2p/interfaces/connection'
+import { Connection, Stream } from '@libp2p/interfaces/connection'
 import { PeerId } from '@libp2p/interfaces/peer-id'
 import { Mplex } from '@libp2p/mplex'
 import { Multiaddr } from '@multiformats/multiaddr'
@@ -17,21 +16,19 @@ import map from 'it-map'
 import { pipe } from 'it-pipe'
 import { createLibp2p, Libp2p } from 'libp2p'
 import { isRxCollection } from 'rxdb'
-import { EventEmitter } from 'events'
 
 import { Database } from '../../db'
 import { Base } from '../../model/base'
 import { compareDates } from '../../util'
 import { Peer } from '../../model'
+import { Channel } from '@onichandame/channel'
 
-export class Synchronizer extends EventEmitter {
+export class Synchronizer extends Channel<SynchronizerEvent> {
   private syncProtocol = `/sync/1.0` as const
   private handshakeProtocol = `/handshake/1.0` as const
-  private updateEvent = `update` as const
-  private disconnectEvent = `disconnect` as const
-  private handshakeInitEvent = `handshake:init` as const
-  private handshakeDenyEvent = `handshake:deny` as const
-  private handshakeAcceptEvent = `handshake:accept` as const
+  private syncSwarm = new Map<string, Stream>()
+  private handshakeSwarm = new Map<string, Stream>()
+  private locks = new Set<string>()
 
   /** DO NOT instantiate directly using the constructor! use {@link Synchronizer.create} instead */
   constructor(private db: Database, private libp2p: Libp2p) {
@@ -108,67 +105,124 @@ export class Synchronizer extends EventEmitter {
     return synchronizer
   }
 
-  public send<T extends Base>(doc: DocumentType<{ new (): T }> & T) {
-    this.emit(this.updateEvent, {
-      type: `sync`,
-      collectionName: doc.collection.name,
+  public update<T extends Base>(doc: DocumentType<{ new (): T }> & T) {
+    this.send({
+      type: `update`,
+      collectionName: doc.collection.name as keyof Database,
+      schemaVersion: doc.collection.schema.version,
       doc: doc,
-    } as SyncPayload)
+    })
+  }
+
+  public async disconnectFromPeer(peerId: string) {
+    this.syncSwarm.get(peerId)?.close()
   }
 
   public async destroy() {
+    await this.close()
     await this.libp2p.stop()
-    this.removeAllListeners()
   }
 
   public async connectToPeer(peer: Peer) {
-    if (!peer.multiaddrs || !peer.multiaddrs.length) return
-    let connection: Connection | null = null
-    for (const multiaddr of peer.multiaddrs) {
-      const abortController = new AbortController()
-      setTimeout(() => {
-        abortController.abort()
-      }, 100000)
-      connection = await this.libp2p.dial(new Multiaddr(multiaddr), {
-        signal: abortController.signal,
-      })
-      break
-    }
-    if (!connection) throw new Error(`failed to connect to peer ${peer.id}`)
-    const { stream: handshake } = await connection.newStream(
-      this.handshakeProtocol
-    )
-    let handshaked = false
-    for await (const hs of handshake.source) {
-      if (new TextDecoder().decode(hs) === `OK`) handshaked = true
-      break
-    }
-    handshake.close()
-    if (!handshaked) {
-      connection.close()
-      throw new Error(`handshake to peer ${peer.id} rejected`)
-    }
-    const { stream: sync } = await connection.newStream(this.syncProtocol)
-    const that = this
-    pipe(
-      async function* () {
-        for await (const item of that.genSyncableItems()) yield item
-      },
-      source =>
-        map(source, item => new TextEncoder().encode(JSON.stringify(item))),
-      sync.sink
-    )
-    pipe(
-      sync.source,
-      source =>
-        map(
-          source,
-          raw => JSON.parse(new TextDecoder().decode(raw)) as SyncPayload
-        ),
-      async source => {
-        for await (const p of source) await this.sync(p)
+    if (this.locks.has(peer.id)) return
+    this.locks.add(peer.id)
+    try {
+      if (!peer.multiaddrs || !peer.multiaddrs.length)
+        throw new Error(`peer not reachable. consider adding addresses`)
+      let connection: Connection | null = null
+      DialLoop: for (const multiaddr of peer.multiaddrs) {
+        try {
+          const abortController = new AbortController()
+          connection = await this.libp2p.dial(new Multiaddr(multiaddr), {
+            signal: abortController.signal,
+          })
+          break DialLoop
+        } catch (e) {}
       }
-    )
+      if (!connection) throw new Error(`failed to connect to peer ${peer.id}`)
+      try {
+        const { stream: handshake } = await connection.newStream(
+          this.handshakeProtocol
+        )
+        this.handshakeSwarm.set(peer.id, handshake)
+        await new Promise<void>((r, j) => {
+          ;(async () => {
+            for await (const hs of handshake.source) {
+              if (new TextDecoder().decode(hs) === `OK`) {
+                r()
+                break
+              }
+            }
+          })()
+          setTimeout(() => j(new Error(`handshake timed out`)), 30000)
+        }).finally(() => {
+          this.handshakeSwarm.delete(peer.id)
+          handshake.close()
+        })
+        const { stream: sync } = await connection.newStream(this.syncProtocol)
+        const that = this
+        this.syncSwarm.set(peer.id, sync)
+        this.send({ type: `peer:connect`, peerId: peer.id })
+        Promise.allSettled([
+          pipe(
+            async function* () {
+              for await (const item of that.genSyncableItems()) yield item
+              for await (const item of that)
+                if (item.type === `update`) yield item
+            },
+            source =>
+              map(source, item =>
+                new TextEncoder().encode(JSON.stringify(item))
+              ),
+            sync.sink
+          ),
+          pipe(
+            sync.source,
+            source =>
+              map(
+                source,
+                raw => JSON.parse(new TextDecoder().decode(raw)) as UpdateEvent
+              ),
+            async source => {
+              for await (const p of source) await this.sync(p)
+            }
+          ),
+        ]).finally(() => {
+          this.syncSwarm.delete(peer.id)
+          this.locks.delete(peer.id)
+          sync.close()
+          this.send({ type: `peer:disconnect`, peerId: peer.id })
+        })
+      } catch (e) {
+        connection.close()
+        throw e
+      }
+    } catch (e) {
+      this.locks.delete(peer.id)
+      throw e
+    }
+  }
+
+  public async auditSwarm() {
+    for (const peer of await this.db.peers.find().exec())
+      if (peer.multiaddrs?.length) this.connectToPeer(peer)
+    for (const [peerId, stream] of this.syncSwarm) {
+      if (!(await this.db.peers.findOne().where(`id`).eq(peerId).exec()))
+        stream.close()
+    }
+  }
+
+  public async acceptHandshake(peerId: string) {
+    await this.db.peers.insert({ id: peerId })
+    const stream = this.handshakeSwarm.get(peerId)
+    if (stream)
+      await pipe(function* () {
+        yield new TextEncoder().encode(`OK`)
+      }, stream.sink)
+  }
+
+  public async denyHandshake(peerId: string) {
+    this.handshakeSwarm.get(peerId)?.close()
   }
 
   public get id() {
@@ -179,81 +233,97 @@ export class Synchronizer extends EventEmitter {
     return this.libp2p.getMultiaddrs().map(v => v.toString())
   }
 
-  on(
-    ev:
-      | typeof this.handshakeInitEvent
-      | typeof this.handshakeAcceptEvent
-      | typeof this.handshakeDenyEvent,
-    cb: (payload: IncomingStreamData) => void
-  ): this
-  on(ev: typeof this.disconnectEvent, cb: (peerId: string) => void): this
-  on(ev: typeof this.updateEvent, cb: (payload: SyncPayload) => void): this
-  on(ev: string, cb: (payload: any) => void) {
-    return super.on(ev, cb)
-  }
-
-  emit(
-    ev:
-      | typeof this.handshakeInitEvent
-      | typeof this.handshakeAcceptEvent
-      | typeof this.handshakeDenyEvent,
-    payload: IncomingStreamData
-  ): boolean
-  emit(ev: typeof this.disconnectEvent, peerId: string): boolean
-  emit(ev: typeof this.updateEvent, payload: SyncPayload): boolean
-  emit(ev: string, payload: any) {
-    return super.emit(ev, payload)
-  }
-
   private async init() {
     await this.libp2p.handle(this.handshakeProtocol, async e => {
-      const peer = await this.db.peers
-        .findOne()
-        .where(`id`)
-        .eq(e.connection.remotePeer.toString())
-        .exec()
-      if (!peer) {
-        this.emit(this.handshakeInitEvent, e)
-      } else
-        await pipe(function* () {
-          yield new TextEncoder().encode(`OK`)
-        }, e.stream.sink)
+      const peerId = e.connection.remotePeer.toString()
+      if (this.locks.has(peerId)) return e.stream.close()
+      try {
+        this.locks.add(peerId)
+        const peer = await this.db.peers.findOne().where(`id`).eq(peerId).exec()
+        if (peer) {
+          await pipe(function* () {
+            yield new TextEncoder().encode(`OK`)
+          }, e.stream.sink)
+          this.locks.delete(peerId)
+        } else {
+          this.handshakeSwarm.set(peerId, e.stream)
+          ;(async () => {
+            for await (const _ of e.stream.source) {
+            }
+            this.handshakeSwarm.delete(peerId)
+            this.locks.delete(peerId)
+          })()
+          this.send({ type: `peer:handshake`, peerId })
+        }
+      } catch (err) {
+        e.stream.close()
+        throw err
+      }
     })
     await this.libp2p.handle(this.syncProtocol, async e => {
       const peerId = e.connection.remotePeer.toString()
-      if (await this.db.peers.findOne().where(`id`).eq(peerId).exec()) {
-        pipe(
-          e.stream.source,
-          source =>
-            map(
-              source,
-              raw => JSON.parse(new TextDecoder().decode(raw)) as SyncPayload
+      if (this.locks.has(peerId)) return e.stream.close()
+      try {
+        this.locks.add(peerId)
+        if (await this.db.peers.findOne().where(`id`).eq(peerId).exec()) {
+          this.syncSwarm.set(peerId, e.stream)
+          this.send({ type: `peer:connect`, peerId })
+          const that = this
+          Promise.allSettled([
+            pipe(
+              e.stream.source,
+              source =>
+                map(
+                  source,
+                  raw =>
+                    JSON.parse(new TextDecoder().decode(raw)) as UpdateEvent
+                ),
+              async source => {
+                for await (const payload of source) await this.sync(payload)
+              }
             ),
-          async source => {
-            for await (const payload of source) await this.sync(payload)
-          }
-        )
-        const that = this
-        pipe(
-          async function* () {
-            for await (const item of that.genSyncableItems()) yield item
-            console.log(EventEmitter.on)
-            for await (const [item] of EventEmitter.on(that, that.updateEvent))
-              yield item
-          },
-          source =>
-            map(source, item => new TextEncoder().encode(JSON.stringify(item))),
-          e.stream.sink
-        )
-      } else {
-        e.connection.close()
+            pipe(
+              async function* () {
+                for await (const item of that.genSyncableItems()) yield item
+                for await (const item of that)
+                  switch (item.type) {
+                    case `update`:
+                      yield item
+                      break
+                  }
+              },
+              source =>
+                map(source, item =>
+                  new TextEncoder().encode(JSON.stringify(item))
+                ),
+              e.stream.sink
+            ),
+          ]).finally(() => {
+            this.syncSwarm.delete(peerId)
+            this.locks.delete(peerId)
+            this.send({ type: `peer:disconnect`, peerId })
+          })
+        } else {
+          e.connection.close()
+          this.locks.delete(peerId)
+        }
+      } catch (e) {
+        this.locks.delete(peerId)
+        throw e
       }
     })
     await this.libp2p.start()
     console.log(this.libp2p.getMultiaddrs().map(v => v.toString()))
+    const auditDaemon = setInterval(() => this.auditSwarm(), 1000 * 5)
+    this.auditSwarm()
+    ;(async () => {
+      for await (const _ of this) {
+      }
+      clearInterval(auditDaemon)
+    })()
   }
 
-  private async sync(payload: SyncPayload) {
+  private async sync(payload: UpdateEvent) {
     const collection: ReturnCollectionType<typeof Base> =
       this.db[payload.collectionName]
     if (isRxCollection(collection)) {
@@ -280,10 +350,26 @@ export class Synchronizer extends EventEmitter {
         this.db[collectionName]
       if (isRxCollection(collection)) {
         for (const doc of await collection.find().exec())
-          yield { doc: doc.toJSON(), collectionName } as SyncPayload
+          yield {
+            type: `update`,
+            schemaVersion: collection.schema.version,
+            doc: doc.toJSON(),
+            collectionName,
+          } as UpdateEvent
       }
     }
   }
 }
 
-type SyncPayload = { doc: Base; collectionName: keyof Database }
+type CloseEvent = { type: 'close' }
+type PeerEvent = {
+  type: 'peer:disconnect' | 'peer:connect' | 'peer:handshake'
+  peerId: string
+}
+type UpdateEvent = {
+  type: 'update'
+  doc: Base
+  collectionName: keyof Database
+  schemaVersion: number
+}
+type SynchronizerEvent = CloseEvent | UpdateEvent | PeerEvent

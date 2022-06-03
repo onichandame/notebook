@@ -1,4 +1,4 @@
-import { Add } from "@mui/icons-material";
+import { Add } from '@mui/icons-material'
 import {
   Card,
   CardActionArea,
@@ -7,41 +7,39 @@ import {
   Grid,
   SpeedDialAction,
   Typography,
-} from "@mui/material";
-import { DocumentType } from "@onichandame/type-rxdb";
-import { FC, useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+} from '@mui/material'
+import { DocumentType } from '@onichandame/type-rxdb'
+import { FC, useCallback, useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 
-import { Actions } from "../../actions";
-import { Exception, Loading, PlaceHolder } from "../../common";
-import { useDb } from "../../db";
-import { Password } from "../../model";
-import { formatError } from "../../util";
+import { Actions } from '../../actions'
+import { CenterRow, Exception, Loading, PlaceHolder } from '../../common'
+import { useDb } from '../../db'
+import { Password } from '../../model'
+import { formatError } from '../../util'
 
 export const List: FC = () => {
-  const [pwds, setPwds] = useState<DocumentType<typeof Password>[] | null>(
-    null
-  );
-  const [err, setErr] = useState<unknown>(null);
-  const navigate = useNavigate();
-  const db = useDb();
+  const [pwds, setPwds] = useState<DocumentType<typeof Password>[] | null>(null)
+  const [err, setErr] = useState<unknown>(null)
+  const navigate = useNavigate()
+  const db = useDb()
   const updatePwds = useCallback(async () => {
     try {
       const pwds = await db?.passwords
         .find()
         .where(`deletedAt`)
         .exists(false)
-        .exec();
+        .exec()
       if (pwds) {
-        setPwds(pwds);
+        setPwds(pwds)
       }
     } catch (e) {
-      setErr(e);
+      setErr(e)
     }
-  }, [db]);
+  }, [db])
   useEffect(() => {
-    updatePwds();
-  }, [updatePwds]);
+    updatePwds()
+  }, [updatePwds])
   return err ? (
     <Exception message={formatError(err)} />
   ) : pwds ? (
@@ -54,12 +52,12 @@ export const List: FC = () => {
           justifyContent="start"
           flexGrow={1}
         >
-          {pwds.map((pwd) => (
+          {pwds.map(pwd => (
             <Grid item key={pwd.id}>
               <Card sx={{ minWidth: 180 }}>
                 <CardActionArea
                   onClick={() => {
-                    navigate(pwd.id.toString());
+                    navigate(pwd.id.toString())
                   }}
                 >
                   <CardMedia
@@ -67,7 +65,7 @@ export const List: FC = () => {
                     height="150"
                     image={
                       pwd.icon ||
-                      "https://media.wired.com/photos/5926e34f8d4ebc5ab806bd1c/master/pass/GettyImages-528338761.jpg"
+                      'https://media.wired.com/photos/5926e34f8d4ebc5ab806bd1c/master/pass/GettyImages-528338761.jpg'
                     }
                     alt={pwd.title}
                   />
@@ -86,19 +84,19 @@ export const List: FC = () => {
             icon={<Add />}
             tooltipTitle="Create"
             onClick={() => {
-              navigate(`create`);
+              navigate(`create`)
             }}
           />
         </Actions>
       </>
     ) : (
-      <PlaceHolder
-        entityName="password"
-        collectionName="password vault"
-        link="create"
-      />
+      <CenterRow>
+        <PlaceHolder>
+          <Link to="create">Save your first password!</Link>
+        </PlaceHolder>
+      </CenterRow>
     )
   ) : (
     <Loading />
-  );
-};
+  )
+}

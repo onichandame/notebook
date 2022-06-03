@@ -1,15 +1,17 @@
-import { Button, Grid, Typography } from "@mui/material";
-import { FC } from "react";
-import { useNavigate } from "react-router-dom";
+import { Button, Grid, Typography } from '@mui/material'
+import { FC } from 'react'
+import { useNavigate } from 'react-router-dom'
 
-import ReactMarkdown from "react-markdown";
-import { DocumentType } from "@onichandame/type-rxdb";
-import { Delete } from "./delete";
+import ReactMarkdown from 'react-markdown'
+import { DocumentType } from '@onichandame/type-rxdb'
 
-import { Note } from "../../../model";
+import { Note } from '../../../model'
+import { Confirm } from '../../../common'
+import { useSync } from '../../../synchronizer'
 
 export const Detail: FC<{ note: DocumentType<typeof Note> }> = ({ note }) => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
+  const sync = useSync()
   return (
     <Grid container direction="column" spacing={4}>
       <Grid item>
@@ -28,23 +30,33 @@ export const Detail: FC<{ note: DocumentType<typeof Note> }> = ({ note }) => {
                 <Button
                   variant="contained"
                   onClick={() => {
-                    navigate(`update`);
+                    navigate(`update`)
                   }}
                 >
                   edit
                 </Button>
               </Grid>
               <Grid item>
-                <Delete note={note} />
+                <Confirm
+                  title="Delete note"
+                  description="Are you sure?"
+                  onYes={async () => {
+                    const doc = await note.softDelete()
+                    sync?.update(doc)
+                    navigate(-1)
+                  }}
+                  color="secondary"
+                >
+                  delete
+                </Confirm>
               </Grid>
             </Grid>
           </Grid>
         </Grid>
       </Grid>
       <Grid item>
-        {note.content &&
-          <ReactMarkdown>{note.content}</ReactMarkdown>}
+        {note.content && <ReactMarkdown>{note.content}</ReactMarkdown>}
       </Grid>
     </Grid>
-  );
-};
+  )
+}

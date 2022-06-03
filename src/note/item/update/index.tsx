@@ -1,30 +1,31 @@
-import { Button, Grid, TextField } from "@mui/material";
-import { Controller, useForm } from "react-hook-form";
-import { classValidatorResolver } from "@hookform/resolvers/class-validator";
-import { FC } from "react";
-import { useNavigate } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
-import { IsOptional, IsString } from "class-validator";
-import { DocumentType } from "@onichandame/type-rxdb";
+import { Button, Grid, TextField } from '@mui/material'
+import { Controller, useForm } from 'react-hook-form'
+import { classValidatorResolver } from '@hookform/resolvers/class-validator'
+import { FC } from 'react'
+import { useNavigate } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
+import { IsOptional, IsString } from 'class-validator'
+import { DocumentType } from '@onichandame/type-rxdb'
 
-import { Note } from "../../../model";
-import { useSnackbar } from "notistack";
-import { formatError } from "../../../util";
+import { Note } from '../../../model'
+import { useSnackbar } from 'notistack'
+import { formatError } from '../../../util'
+import { useSync } from '../../../synchronizer'
 
 class UpdateNoteForm implements Partial<Note> {
   @IsOptional()
   @IsString()
-  title?: string;
+  title?: string
   @IsOptional()
   @IsString()
-  content?: string;
+  content?: string
 }
 
-const resolver = classValidatorResolver(UpdateNoteForm);
+const resolver = classValidatorResolver(UpdateNoteForm)
 
 export const Update: FC<{ note: DocumentType<typeof Note> }> = ({ note }) => {
-  const navigate = useNavigate();
-  const { enqueueSnackbar } = useSnackbar();
+  const navigate = useNavigate()
+  const { enqueueSnackbar } = useSnackbar()
   const {
     handleSubmit,
     control,
@@ -33,16 +34,18 @@ export const Update: FC<{ note: DocumentType<typeof Note> }> = ({ note }) => {
   } = useForm<UpdateNoteForm>({
     resolver,
     defaultValues: note.toJSON(),
-  });
-  const content = watch(`content`);
+  })
+  const content = watch(`content`)
+  const sync = useSync()
   return (
     <form
-      onSubmit={handleSubmit(async (vals) => {
+      onSubmit={handleSubmit(async vals => {
         try {
-          await note.atomicPatch({ ...vals, updatedAt: new Date() });
-          navigate(-1);
+          const doc = await note.atomicPatch({ ...vals, updatedAt: new Date() })
+          sync?.update(doc)
+          navigate(-1)
         } catch (e) {
-          enqueueSnackbar(formatError(e), { variant: `error` });
+          enqueueSnackbar(formatError(e), { variant: `error` })
         }
       })}
     >
@@ -60,11 +63,11 @@ export const Update: FC<{ note: DocumentType<typeof Note> }> = ({ note }) => {
                 helperText={errors.title?.message}
                 InputLabelProps={{ shrink: true }}
                 InputProps={{
-                  sx: { fontSize: (theme) => theme.typography.h4.fontSize },
+                  sx: { fontSize: theme => theme.typography.h4.fontSize },
                 }}
                 defaultValue={note.title}
-                onChange={(e) => {
-                  field.onChange(e.target.value);
+                onChange={e => {
+                  field.onChange(e.target.value)
                 }}
               />
             )}
@@ -82,25 +85,18 @@ export const Update: FC<{ note: DocumentType<typeof Note> }> = ({ note }) => {
                 error={!!errors.content}
                 helperText={errors.content?.message}
                 defaultValue={note.content}
-                onChange={(e) => {
-                  field.onChange(e.target.value || undefined);
+                onChange={e => {
+                  field.onChange(e.target.value || undefined)
                 }}
               />
             )}
           />
         </Grid>
-        <Grid item>
-          {content &&
-            <ReactMarkdown>{content}</ReactMarkdown>}
-        </Grid>
+        <Grid item>{content && <ReactMarkdown>{content}</ReactMarkdown>}</Grid>
         <Grid item>
           <Grid container direction="row" justifyContent="end" spacing={3}>
             <Grid item>
-              <Button
-                variant="contained"
-                type="submit"
-                disabled={isSubmitting}
-              >
+              <Button variant="contained" type="submit" disabled={isSubmitting}>
                 save & exit
               </Button>
             </Grid>
@@ -109,7 +105,7 @@ export const Update: FC<{ note: DocumentType<typeof Note> }> = ({ note }) => {
                 variant="contained"
                 color="secondary"
                 onClick={() => {
-                  navigate(-1);
+                  navigate(-1)
                 }}
                 disabled={isSubmitting}
               >
@@ -120,5 +116,5 @@ export const Update: FC<{ note: DocumentType<typeof Note> }> = ({ note }) => {
         </Grid>
       </Grid>
     </form>
-  );
-};
+  )
+}

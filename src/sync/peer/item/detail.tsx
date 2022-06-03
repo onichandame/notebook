@@ -3,9 +3,9 @@ import { DocumentType } from '@onichandame/type-rxdb'
 import { FC } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { Confirm } from '../../common'
-import { Peer } from '../../model'
-import { useSync } from '../../synchronizer'
+import { Confirm } from '../../../common'
+import { Peer } from '../../../model'
+import { useSync } from '../../../synchronizer'
 
 export const Detail: FC<{ peer: DocumentType<typeof Peer> }> = ({ peer }) => {
   const navigate = useNavigate()
@@ -24,13 +24,13 @@ export const Detail: FC<{ peer: DocumentType<typeof Peer> }> = ({ peer }) => {
               optimistic={false}
               onYes={async () => {
                 await peer.remove()
-                sync?.emit(`disconnect`, peer.id)
                 navigate(-1)
               }}
               description="Synchronization to this peer will be disabled. Are you sure?"
               title="Delete peer"
-              buttonText="delete"
-            />
+            >
+              delete
+            </Confirm>
           </Grid>
         </Grid>
       </Grid>

@@ -1,6 +1,6 @@
 import { IconButton } from '@mui/material'
 import { useSnackbar } from 'notistack'
-import { QRCodeSVG } from 'qrcode.react'
+import { QRCodeCanvas } from 'qrcode.react'
 import { FC } from 'react'
 import { formatError } from '../util'
 
@@ -17,7 +17,7 @@ export const QrCode: FC<{ value: string }> = ({ value }) => {
         }
       }}
     >
-      <QRCodeSVG
+      <QRCodeCanvas
         value={value}
         imageSettings={{
           src: `https://cdn-icons-png.flaticon.com/512/1621/1621635.png`,
@@ -25,6 +25,7 @@ export const QrCode: FC<{ value: string }> = ({ value }) => {
           height: 20,
           excavate: true,
         }}
+        includeMargin={true}
       />
     </IconButton>
   )

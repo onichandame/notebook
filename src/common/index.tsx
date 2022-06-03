@@ -1,6 +1,7 @@
 export * from './center'
 export * from './confirm'
 export * from './qrcode'
+export * from './qrField'
 export * from './placeholder'
 export * from './clipboard'
 export * from './iconField'

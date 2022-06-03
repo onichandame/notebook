@@ -2,9 +2,9 @@ import { DocumentType } from '@onichandame/type-rxdb'
 import { FC, useEffect, useState } from 'react'
 import { Route, Routes, useParams } from 'react-router-dom'
 
-import { Loading } from '../../common'
-import { useDb } from '../../db'
-import { Peer } from '../../model'
+import { Loading } from '../../../common'
+import { useDb } from '../../../db'
+import { Peer } from '../../../model'
 import { Detail } from './detail'
 
 export const Item: FC = () => {

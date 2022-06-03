@@ -1,5 +1,4 @@
 import { Button } from '@mui/material'
-import { pipe } from 'it-pipe'
 import { useSnackbar } from 'notistack'
 import {
   ContextType,
@@ -23,58 +22,66 @@ export const SyncProvider: FC = ({ children }) => {
   useEffect(() => {
     let active = true
     if (db) {
-      Synchronizer.create(db).then(sync => {
-        if (active) setSync(sync)
-      })
+      Synchronizer.create(db)
+        .then(sync => {
+          if (active) setSync(sync)
+        })
+        .catch(e => {
+          console.error(e)
+          enqueueSnackbar(formatError(e), { variant: `error` })
+        })
     }
     return () => {
       active = false
     }
   }, [db, setSync])
   useEffect(() => {
-    sync?.on(`handshake:init`, e => {
-      const key = enqueueSnackbar(
-        `received handshake request from ${e.connection.remotePeer.toString()}`,
-        {
-          action: (
-            <Button
-              onClick={async () => {
-                closeSnackbar(key)
-                await db?.peers.insert({
-                  id: e.connection.remotePeer.toString(),
-                })
-                await pipe(function* () {
-                  yield new TextEncoder().encode(`OK`)
-                }, e.stream.sink)
-              }}
-            >
-              accept
-            </Button>
-          ),
-          onClose: (_, reason) => {
-            switch (reason) {
-              case `maxsnack`:
-              case `timeout`:
-                e.connection.close()
-                break
+    if (sync) {
+      ;(async () => {
+        for await (const event of sync) {
+          switch (event.type) {
+            case `peer:handshake`: {
+              const key = enqueueSnackbar(
+                `received handshake request from ${event.peerId}`,
+                {
+                  action: (
+                    <Button
+                      onClick={async () => {
+                        closeSnackbar(key)
+                        await sync.acceptHandshake(event.peerId)
+                      }}
+                    >
+                      accept
+                    </Button>
+                  ),
+                  onClose: (_, reason) => {
+                    switch (reason) {
+                      case `maxsnack`:
+                      case `timeout`:
+                        sync.denyHandshake(event.peerId)
+                        break
+                    }
+                  },
+                }
+              )
+              break
             }
-          },
+            case `peer:connect`: {
+              enqueueSnackbar(`connected to peer ${event.peerId}`, {
+                variant: `success`,
+              })
+              break
+            }
+            case `peer:disconnect`: {
+              enqueueSnackbar(`disconnected from peer ${event.peerId}`, {
+                variant: `warning`,
+              })
+              break
+            }
+          }
         }
-      )
-    })
-    db?.peers
-      .find()
-      .exec()
-      .then(peers =>
-        Promise.all(
-          peers.map(peer =>
-            sync?.connectToPeer(peer).catch(e => {
-              enqueueSnackbar(formatError(e), { variant: `error` })
-              console.log(e)
-            })
-          )
-        )
-      )
+      })()
+    }
     return () => {
       sync?.destroy()
     }
