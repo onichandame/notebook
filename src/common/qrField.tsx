@@ -4,10 +4,17 @@ import QrReader from 'react-qr-barcode-scanner'
 
 import { CenterRow } from './center'
 
-export const QrField: FC<Props> = ({ onConfirm, ...other }) => {
+export const QrField: FC<Props> = ({ onConfirm, children }) => {
   const [open, setOpen] = useState(false)
   return (
     <>
+      <div
+        onClick={() => {
+          setOpen(true)
+        }}
+      >
+        {children}
+      </div>
       <CenterRow>
         <Modal
           open={open}

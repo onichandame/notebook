@@ -6,6 +6,8 @@ export class Peer {
   id!: string
   @Field({ required: true })
   name!: string
+  @Field()
+  icon?: string
   @Field({ type: `array`, items: { type: `string` } })
   multiaddrs?: string[]
   @Field()

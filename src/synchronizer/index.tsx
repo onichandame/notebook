@@ -42,13 +42,14 @@ export const SyncProvider: FC = ({ children }) => {
           switch (event.type) {
             case `peer:handshake`: {
               const key = enqueueSnackbar(
-                `received handshake request from ${event.peerId}`,
+                `received handshake request from ${event.peerId.slice(-5)}`,
                 {
+                  variant: `info`,
                   action: (
                     <Button
                       onClick={async () => {
                         closeSnackbar(key)
-                        await sync.acceptHandshake(event.peerId)
+                        sync.acceptHandshake(event.peerId)
                       }}
                     >
                       accept
@@ -67,15 +68,37 @@ export const SyncProvider: FC = ({ children }) => {
               break
             }
             case `peer:connect`: {
-              enqueueSnackbar(`connected to peer ${event.peerId}`, {
-                variant: `success`,
-              })
+              enqueueSnackbar(
+                `connected to peer ${
+                  (
+                    await db?.peers
+                      .findOne()
+                      .where(`id`)
+                      .eq(event.peerId)
+                      .exec()
+                  )?.name
+                }`,
+                {
+                  variant: `success`,
+                }
+              )
               break
             }
             case `peer:disconnect`: {
-              enqueueSnackbar(`disconnected from peer ${event.peerId}`, {
-                variant: `warning`,
-              })
+              enqueueSnackbar(
+                `disconnected from peer ${
+                  (
+                    await db?.peers
+                      .findOne()
+                      .where(`id`)
+                      .eq(event.peerId)
+                      .exec()
+                  )?.name
+                }`,
+                {
+                  variant: `warning`,
+                }
+              )
               break
             }
           }

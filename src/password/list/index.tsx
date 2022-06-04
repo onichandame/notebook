@@ -27,6 +27,7 @@ export const List: FC = () => {
     try {
       const pwds = await db?.passwords
         .find()
+        .sort({ createdAt: `asc` })
         .where(`deletedAt`)
         .exists(false)
         .exec()

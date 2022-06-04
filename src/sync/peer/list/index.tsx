@@ -2,6 +2,7 @@ import {
   Card,
   CardActionArea,
   CardContent,
+  CardMedia,
   Grid,
   Typography,
 } from '@mui/material'
@@ -40,9 +41,18 @@ export const List: FC = () => {
                 <Grid item key={peer.id}>
                   <Card sx={{ maxWidth: 180 }}>
                     <CardActionArea onClick={() => navigate(peer.id)}>
+                      <CardMedia
+                        component="img"
+                        height="150"
+                        image={
+                          peer.icon ||
+                          'https://cdn2.iconfinder.com/data/icons/sync-and-data-exchange/64/PC-Sync-512.png'
+                        }
+                        alt={peer.name}
+                      />
                       <CardContent>
                         <Typography variant="h5" align="center">
-                          {peer.id}
+                          {peer.name}
                         </Typography>
                       </CardContent>
                     </CardActionArea>

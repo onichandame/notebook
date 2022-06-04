@@ -1,22 +1,23 @@
-import { classValidatorResolver } from "@hookform/resolvers/class-validator";
-import { Button, Divider, Grid, TextField } from "@mui/material";
-import { DocumentType } from "@onichandame/type-rxdb";
-import { FC } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { classValidatorResolver } from '@hookform/resolvers/class-validator'
+import { Button, Divider, Grid, TextField } from '@mui/material'
+import { DocumentType } from '@onichandame/type-rxdb'
+import { FC } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 
-import { CenterRow, IconField } from "../../../common";
-import { Password } from "../../../model";
+import { CenterRow, IconField } from '../../../common'
+import { Password } from '../../../model'
+import { useSync } from '../../../synchronizer'
 
 class UpdatePasswordForm implements Partial<Password> {
-  title?: string;
-  password?: string;
-  username?: string;
-  url?: string;
-  icon?: string;
+  title?: string
+  password?: string
+  username?: string
+  url?: string
+  icon?: string
 }
 
-const resolver = classValidatorResolver(UpdatePasswordForm);
+const resolver = classValidatorResolver(UpdatePasswordForm)
 
 export const Update: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
   const {
@@ -26,14 +27,16 @@ export const Update: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
   } = useForm<UpdatePasswordForm>({
     resolver,
     defaultValues: pwd.toJSON(),
-  });
-  const navigate = useNavigate();
+  })
+  const navigate = useNavigate()
+  const sync = useSync()
   return (
     <CenterRow>
       <form
-        onSubmit={handleSubmit(async (vals) => {
-          await pwd.atomicPatch({ ...vals, updatedAt: new Date() });
-          navigate(-1);
+        onSubmit={handleSubmit(async vals => {
+          const doc = await pwd.atomicPatch({ ...vals, updatedAt: new Date() })
+          sync?.update(doc)
+          navigate(-1)
         })}
       >
         <Grid container direction="column" spacing={4} alignItems="stretch">
@@ -46,8 +49,8 @@ export const Update: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
                     name="icon"
                     render={({ field }) => (
                       <IconField
-                        onConfirm={(val) => {
-                          field.onChange(val);
+                        onConfirm={val => {
+                          field.onChange(val)
                         }}
                         value={pwd.icon || null}
                       />
@@ -66,11 +69,11 @@ export const Update: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
                           helperText={errors.title?.message}
                           InputProps={{
                             sx: {
-                              fontSize: (theme) => theme.typography.h5.fontSize,
+                              fontSize: theme => theme.typography.h5.fontSize,
                             },
                           }}
                           defaultValue={pwd.title}
-                          onChange={(e) => field.onChange(e.target.value)}
+                          onChange={e => field.onChange(e.target.value)}
                         />
                       )}
                     />
@@ -99,7 +102,7 @@ export const Update: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
                           InputLabelProps={{ shrink: true }}
                           helperText={errors.username?.message}
                           defaultValue={pwd.username}
-                          onChange={(e) => field.onChange(e.target.value)}
+                          onChange={e => field.onChange(e.target.value)}
                         />
                       )}
                     />
@@ -116,7 +119,7 @@ export const Update: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
                           error={!!errors.password}
                           helperText={errors.password?.message}
                           defaultValue={pwd.password}
-                          onChange={(e) => field.onChange(e.target.value)}
+                          onChange={e => field.onChange(e.target.value)}
                         />
                       )}
                     />
@@ -136,7 +139,7 @@ export const Update: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
                           error={!!errors.url}
                           helperText={errors.url?.message}
                           defaultValue={pwd.url}
-                          onChange={(e) => field.onChange(e.target.value)}
+                          onChange={e => field.onChange(e.target.value)}
                         />
                       )}
                     />
@@ -163,9 +166,9 @@ export const Update: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
                     fullWidth
                     color="secondary"
                     variant="contained"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(-1);
+                    onClick={e => {
+                      e.stopPropagation()
+                      navigate(-1)
                     }}
                     disabled={isSubmitting}
                   >
@@ -178,5 +181,5 @@ export const Update: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
         </Grid>
       </form>
     </CenterRow>
-  );
-};
+  )
+}

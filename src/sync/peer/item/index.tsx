@@ -6,6 +6,7 @@ import { Loading } from '../../../common'
 import { useDb } from '../../../db'
 import { Peer } from '../../../model'
 import { Detail } from './detail'
+import { Update } from './update'
 
 export const Item: FC = () => {
   const params = useParams()
@@ -27,10 +28,11 @@ export const Item: FC = () => {
     return () => {
       active = false
     }
-  }, [params])
+  }, [params, db])
   return peer ? (
     <Routes>
       <Route path="/" element={<Detail peer={peer} />} />
+      <Route path="update" element={<Update peer={peer} />} />
     </Routes>
   ) : (
     <Loading />

@@ -1,5 +1,5 @@
 import { QrCode } from '@mui/icons-material'
-import { Grid, Typography } from '@mui/material'
+import { Button, Grid } from '@mui/material'
 import { Multiaddr } from '@multiformats/multiaddr'
 import { useSnackbar } from 'notistack'
 import { FC } from 'react'
@@ -19,18 +19,6 @@ export const Create: FC = () => {
     <Grid container direction="column" alignItems="center" spacing={2}>
       <Grid item>
         <QrField
-          button={
-            <Grid container direction="row" spacing={1} alignItems="center">
-              <Grid item>
-                <Typography justifyContent="center">
-                  Scan remote peer's addresses
-                </Typography>
-              </Grid>
-              <Grid item>
-                <QrCode />
-              </Grid>
-            </Grid>
-          }
           onConfirm={async raw => {
             try {
               const multiaddrs: string[] = JSON.parse(raw)
@@ -38,7 +26,11 @@ export const Create: FC = () => {
               const id = new Multiaddr(multiaddrs[0]).getPeerId()
               if (!id) throw new Error(`peer id not valid`)
               if (!sync) throw new Error(`not connected to sync network`)
-              const peer = await db?.peers.insert({ id, multiaddrs })
+              const peer = await db?.peers.insert({
+                name: id.slice(-5),
+                id,
+                multiaddrs,
+              })
               if (!peer) throw new Error(`peer cannot be created`)
               await sync.connectToPeer(peer)
               navigate(-1)
@@ -47,7 +39,11 @@ export const Create: FC = () => {
               console.error(e)
             }
           }}
-        />
+        >
+          <Button variant="contained" startIcon={<QrCode />}>
+            scan
+          </Button>
+        </QrField>
       </Grid>
     </Grid>
   )

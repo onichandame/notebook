@@ -213,7 +213,7 @@ export class Synchronizer extends Channel<SynchronizerEvent> {
   }
 
   public async acceptHandshake(peerId: string) {
-    await this.db.peers.insert({ id: peerId })
+    await this.db.peers.insert({ name: peerId.slice(-5), id: peerId })
     const stream = this.handshakeSwarm.get(peerId)
     if (stream)
       await pipe(function* () {

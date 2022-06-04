@@ -1,31 +1,32 @@
-import { classValidatorResolver } from "@hookform/resolvers/class-validator";
-import { Button, Grid, TextField } from "@mui/material";
-import { IsOptional, IsString } from "class-validator";
-import { FC } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { classValidatorResolver } from '@hookform/resolvers/class-validator'
+import { Button, Grid, TextField } from '@mui/material'
+import { IsOptional, IsString } from 'class-validator'
+import { FC } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 
-import { IconField } from "../../common";
-import { useDb } from "../../db";
-import { Password } from "../../model";
+import { IconField } from '../../common'
+import { useDb } from '../../db'
+import { Password } from '../../model'
+import { useSync } from '../../synchronizer'
 
 class CreatePasswordForm implements Partial<Password> {
   @IsString()
-  title!: string;
+  title!: string
   @IsString()
-  password!: string;
+  password!: string
   @IsOptional()
   @IsString()
-  icon?: string;
+  icon?: string
   @IsOptional()
   @IsString()
-  url?: string;
+  url?: string
   @IsOptional()
   @IsString()
-  username?: string;
+  username?: string
 }
 
-const resolver = classValidatorResolver(CreatePasswordForm);
+const resolver = classValidatorResolver(CreatePasswordForm)
 
 export const Create: FC = () => {
   const {
@@ -34,14 +35,16 @@ export const Create: FC = () => {
     formState: { errors, isSubmitting },
   } = useForm<CreatePasswordForm>({
     resolver,
-  });
-  const navigate = useNavigate();
-  const db = useDb();
+  })
+  const navigate = useNavigate()
+  const db = useDb()
+  const sync = useSync()
   return (
     <form
-      onSubmit={handleSubmit(async (vals) => {
-        await db?.passwords.insert(vals as any);
-        navigate(-1);
+      onSubmit={handleSubmit(async vals => {
+        const doc = await db?.passwords.insert(vals as any)
+        if (doc) sync?.update(doc)
+        navigate(-1)
       })}
     >
       <Grid container direction="column" spacing={2} alignItems="center">
@@ -54,7 +57,7 @@ export const Create: FC = () => {
                 render={({ field }) => (
                   <IconField
                     value={typeof field.value === `string` ? field.value : null}
-                    onConfirm={(val) => field.onChange(val)}
+                    onConfirm={val => field.onChange(val)}
                   />
                 )}
               />
@@ -69,7 +72,7 @@ export const Create: FC = () => {
                     label="Title"
                     error={!!errors.title}
                     helperText={errors.title?.message}
-                    onChange={(e) => field.onChange(e.target.value)}
+                    onChange={e => field.onChange(e.target.value)}
                   />
                 )}
               />
@@ -85,7 +88,7 @@ export const Create: FC = () => {
                 label="Username"
                 error={!!errors.username}
                 helperText={errors.username?.message}
-                onChange={(e) => field.onChange(e.target.value)}
+                onChange={e => field.onChange(e.target.value)}
               />
             )}
           />
@@ -100,7 +103,7 @@ export const Create: FC = () => {
                 label="Password"
                 error={!!errors.password}
                 helperText={errors.password?.message}
-                onChange={(e) => field.onChange(e.target.value)}
+                onChange={e => field.onChange(e.target.value)}
               />
             )}
           />
@@ -114,7 +117,7 @@ export const Create: FC = () => {
                 label="Website"
                 error={!!errors.url}
                 helperText={errors.url?.message}
-                onChange={(e) => field.onChange(e.target.value)}
+                onChange={e => field.onChange(e.target.value)}
               />
             )}
           />
@@ -126,5 +129,5 @@ export const Create: FC = () => {
         </Grid>
       </Grid>
     </form>
-  );
-};
+  )
+}
