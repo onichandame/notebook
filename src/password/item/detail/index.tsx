@@ -69,6 +69,7 @@ export const Detail: FC<{ pwd: DocumentType<typeof Password> }> = ({ pwd }) => {
                   <TextField
                     variant="standard"
                     label="Password"
+                    type="password"
                     value={pwd.password}
                     InputLabelProps={{ shrink: true }}
                     InputProps={{

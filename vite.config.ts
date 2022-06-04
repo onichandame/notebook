@@ -4,7 +4,6 @@ import swcReact from 'vite-plugin-swc-react'
 
 export default defineConfig({
   server: { watch: { usePolling: true }, hmr: { clientPort: 443 } },
-  optimizeDeps: { exclude: [`ipfs-http-client`, `electron-fetch`] },
   plugins: [
     VitePWA({
       includeAssets: [`favicon.ico`, `apple-touch-icon.png`, `robots.txt`],
