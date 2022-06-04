@@ -8,28 +8,28 @@ import {
   Grid,
   IconButton,
   TextField,
-} from "@mui/material";
-import { FC, useEffect, useState } from "react";
+} from '@mui/material'
+import { FC, useEffect, useState } from 'react'
 
-type Value = string | null;
+type Value = string | null
 type Props = {
   /** callback to change the value in form */
-  onConfirm: (value: Value) => void;
+  onConfirm: (value: Value) => void
   /** the value saved in form */
-  value: Value;
-};
+  value: Value
+}
 
 export const IconField: FC<Props> = ({ onConfirm, value }) => {
-  const [open, setOpen] = useState(false);
-  const [icon, setIcon] = useState<Value>(value);
+  const [open, setOpen] = useState(false)
+  const [icon, setIcon] = useState<Value>(value)
   useEffect(() => {
-    setIcon(value);
-  }, [value]);
+    setIcon(value)
+  }, [value])
   return (
     <>
       <IconButton
         onClick={() => {
-          setOpen(true);
+          setOpen(true)
         }}
       >
         <Avatar src={value || undefined} />
@@ -37,7 +37,7 @@ export const IconField: FC<Props> = ({ onConfirm, value }) => {
       <Dialog
         open={open}
         onClose={() => {
-          setOpen(false);
+          setOpen(false)
         }}
       >
         <DialogTitle>Change Icon</DialogTitle>
@@ -51,8 +51,8 @@ export const IconField: FC<Props> = ({ onConfirm, value }) => {
                 label="Icon Url"
                 variant="filled"
                 defaultValue={icon}
-                onChange={(e) => {
-                  setIcon(e.target.value || null);
+                onChange={e => {
+                  setIcon(e.target.value || null)
                 }}
               />
             </Grid>
@@ -61,22 +61,22 @@ export const IconField: FC<Props> = ({ onConfirm, value }) => {
         <DialogActions>
           <Button
             onClick={() => {
-              setOpen(false);
+              onConfirm(icon)
+              setOpen(false)
+            }}
+          >
+            confirm
+          </Button>
+          <Button
+            onClick={() => {
+              setOpen(false)
             }}
             color="secondary"
           >
             cancel
           </Button>
-          <Button
-            onClick={() => {
-              onConfirm(icon);
-              setOpen(false);
-            }}
-          >
-            confirm
-          </Button>
         </DialogActions>
       </Dialog>
     </>
-  );
-};
+  )
+}
