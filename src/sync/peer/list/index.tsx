@@ -34,11 +34,12 @@ export const List: FC = () => {
               container
               direction="row"
               justifyContent="start"
+              alignItems="stretch"
               spacing={3}
               flexGrow={1}
             >
               {peers.map(peer => (
-                <Grid item key={peer.id}>
+                <Grid item key={peer.id} sx={{ display: `flex` }}>
                   <Card sx={{ width: 180 }}>
                     <CardActionArea onClick={() => navigate(peer.id)}>
                       <CardMedia

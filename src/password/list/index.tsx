@@ -51,10 +51,11 @@ export const List: FC = () => {
           direction="row"
           spacing={3}
           justifyContent="start"
+          alignItems="stretch"
           flexGrow={1}
         >
           {pwds.map(pwd => (
-            <Grid item key={pwd.id}>
+            <Grid item key={pwd.id} sx={{ display: `flex` }}>
               <Card sx={{ width: 180 }}>
                 <CardActionArea
                   onClick={() => {

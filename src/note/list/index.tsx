@@ -51,26 +51,23 @@ export const List: FC = () => {
           direction="row"
           spacing={3}
           justifyContent="start"
+          alignItems="stretch"
           flexGrow={1}
         >
           {notes.map(note => (
-            <Grid item key={`note${note.id}`}>
-              <Card sx={{ width: 180 }} variant="outlined">
+            <Grid item key={`note${note.id}`} sx={{ display: `flex` }}>
+              <Card sx={{ width: 180 }}>
                 <CardActionArea
                   onClick={() => {
                     navigate(note.id.toString())
                   }}
                 >
-                  <CardHeader
-                    title={note.title}
-                    subheader={new Date(note.createdAt).toLocaleDateString()}
-                  />
                   <CardContent>
-                    <Typography>
-                      {note.content &&
-                        (note.content.length < 10
-                          ? note.content
-                          : `${note.content.slice(0, 7)}...`)}
+                    <Typography variant="caption">
+                      {new Date(note.createdAt).toLocaleDateString()}
+                    </Typography>
+                    <Typography variant="h5" overflow="auto">
+                      {note.title}
                     </Typography>
                   </CardContent>
                 </CardActionArea>
