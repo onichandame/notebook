@@ -39,7 +39,7 @@ export const List: FC = () => {
             >
               {peers.map(peer => (
                 <Grid item key={peer.id}>
-                  <Card sx={{ maxWidth: 180 }}>
+                  <Card sx={{ width: 180 }}>
                     <CardActionArea onClick={() => navigate(peer.id)}>
                       <CardMedia
                         component="img"

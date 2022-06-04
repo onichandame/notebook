@@ -55,7 +55,7 @@ export const List: FC = () => {
         >
           {notes.map(note => (
             <Grid item key={`note${note.id}`}>
-              <Card sx={{ minWidth: 180 }} variant="outlined">
+              <Card sx={{ width: 180 }} variant="outlined">
                 <CardActionArea
                   onClick={() => {
                     navigate(note.id.toString())

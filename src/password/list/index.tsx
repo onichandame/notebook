@@ -55,7 +55,7 @@ export const List: FC = () => {
         >
           {pwds.map(pwd => (
             <Grid item key={pwd.id}>
-              <Card sx={{ minWidth: 180 }}>
+              <Card sx={{ width: 180 }}>
                 <CardActionArea
                   onClick={() => {
                     navigate(pwd.id.toString())
